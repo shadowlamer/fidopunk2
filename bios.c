@@ -62,6 +62,13 @@ char getchar() {
 getc_wait_key: 
   ei
   halt
+  ld a,#0b00001000
+  ld (0x5C6A), a  
+  ld a, #0
+  ld (0x5C41), a  
+  ld a, (0x5C3B)
+  or a, #0b00001000
+  ld (0x5C3B), a  
   call 0x02BF  
   ld a, (0x5C3B)
   and a, #0b00100000
