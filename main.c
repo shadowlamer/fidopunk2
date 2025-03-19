@@ -19,6 +19,14 @@ typedef struct {
 
 #define PROMPT "$ "
 
+#define KEYBOARD_NUM_ROWS 8
+#define KEYBOARD_KEYS_PER_ROW 5
+
+typedef struct {
+  unsigned char port;
+  char keys[KEYBOARD_KEYS_PER_ROW];
+} t_keyboard_row;
+
 __at (SCREEN_BUFFER_START) char screen_buf[SCREEN_BUFFER_SIZE];
 __at (ATTR_SCREEN_BUFFER_START) char screen_attr_buf[ATTR_SCREEN_BUFFER_SIZE];
 __at (EMBEDDED_FONT_START) char font[];
@@ -28,6 +36,17 @@ static t_point cursor = {.x=-1, .y=-1};
 static char cmd_buf[MAX_CMD_LEN];
 static char *argv[MAX_PARAMS];
 static unsigned char argc; 
+
+static t_keyboard_row keyboard_layout[KEYBOARD_NUM_ROWS] = {
+  {.port = 0xfe, .keys = {'#', 'z', 'x', 'c', 'v'}},
+  {.port = 0xfd, .keys = {'a', 's', 'd', 'f', 'g'}},
+  {.port = 0xfb, .keys = {'q', 'w', 'e', 'r', 't'}},
+  {.port = 0xf7, .keys = {'1', '2', '3', '4', '5'}},
+  {.port = 0xef, .keys = {'0', '9', '8', '7', '6'}},
+  {.port = 0xdf, .keys = {'p', 'o', 'i', 'u', 'y'}},
+  {.port = 0xbf, .keys = {'\n', 'l', 'k', 'j', 'h'}},
+  {.port = 0x7f, .keys = {' ', ' ', 'm', 'n', 'b'}},
+};
 
 void cls();
 void putchar(char c, unsigned char x, unsigned char y, char attr);
@@ -39,6 +58,7 @@ void cursor_right();
 void printz(char *s, unsigned char x, unsigned char y);
 void scroll();
 char getchar();
+char scan(unsigned char port);
 int read_cmd();
 
 
@@ -134,7 +154,7 @@ int read_cmd() {
   for (;;) {
     key = getchar();
     switch (key) {
-      case 0x0d:  
+      case '\n':  
         cmd_buf[len] = 0x00;
         hide_cursor();
         scroll();
@@ -145,7 +165,7 @@ int read_cmd() {
         len--;
         break;
       default:  
-        if (key >= 0x20 && key < 0x80) {
+        if (key >= 0x20 && key < 0x80 && len < MAX_CMD_LEN) {
           putchar_at_cursor(key);
           cmd_buf[len] = key;
           len++;
@@ -162,27 +182,42 @@ void scroll() {
   __endasm;  
 }
 
-char getchar() {
+char scan(unsigned char port) {
+  (void) port;
   __asm
-getc_wait_key: 
-  ei
-  halt
-  ld a,#0b00001000
-  ld (0x5C6A), a  
-
-  ld a, #0
-  ld (0x5C41), a  
-  ld a, (0x5C3B)
-  or a, #0b00001000
-  ld (0x5C3B), a  
-  call 0x02BF  
-  ld a, (0x5C3B)
-  and a, #0b00100000
-  jr z, getc_wait_key  
-  ld a, (0x5C08)
-  ld l, a  
-  ld a, (0x5C3B)
-  and a, #0b11011111
-  ld (0x5C3B), a  
+     ld ix, #4
+     add ix, sp  ; set ix to arguments  
+     ld c, #0xfe
+     ld b, 0(ix)
+     in a,(c)  
+     and #0x1f
+     ld l, a
   __endasm;  
+}
+
+char getchar() {
+  static unsigned char scanline;
+  static char last_key = '\0';
+  static unsigned char key_wait_timer = 0x00;
+  
+  if (key_wait_timer > 0) key_wait_timer--;
+  
+  for (unsigned char r = 0; r < KEYBOARD_NUM_ROWS; r++) {
+    t_keyboard_row *row = keyboard_layout + r;
+    scanline = scan(row->port);
+    for (unsigned char i = 0; i < KEYBOARD_KEYS_PER_ROW; i++) {
+      if (row->keys[i] != '#') {
+        if ((scanline & 0x01) == 0) {
+          char key = row->keys[i];
+          if (last_key != key || key_wait_timer == 0) {
+            last_key = key;
+            key_wait_timer = 100;
+            return key;
+          }
+        }
+      }
+      scanline = scanline >> 1;
+    }
+  }
+  return 0x00;
 }
