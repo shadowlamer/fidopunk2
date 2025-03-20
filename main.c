@@ -25,6 +25,8 @@ typedef struct {
 typedef struct {
   unsigned char port;
   char keys[KEYBOARD_KEYS_PER_ROW];
+  char caps[KEYBOARD_KEYS_PER_ROW];
+  char symb[KEYBOARD_KEYS_PER_ROW];
 } t_keyboard_row;
 
 __at (SCREEN_BUFFER_START) char screen_buf[SCREEN_BUFFER_SIZE];
@@ -38,14 +40,46 @@ static char *argv[MAX_PARAMS];
 static unsigned char argc; 
 
 static t_keyboard_row keyboard_layout[KEYBOARD_NUM_ROWS] = {
-  {.port = 0xfe, .keys = {'#', 'z', 'x', 'c', 'v'}},
-  {.port = 0xfd, .keys = {'a', 's', 'd', 'f', 'g'}},
-  {.port = 0xfb, .keys = {'q', 'w', 'e', 'r', 't'}},
-  {.port = 0xf7, .keys = {'1', '2', '3', '4', '5'}},
-  {.port = 0xef, .keys = {'0', '9', '8', '7', '6'}},
-  {.port = 0xdf, .keys = {'p', 'o', 'i', 'u', 'y'}},
-  {.port = 0xbf, .keys = {'\n', 'l', 'k', 'j', 'h'}},
-  {.port = 0x7f, .keys = {' ', ' ', 'm', 'n', 'b'}},
+  {
+    .port = 0xfe, 
+    .keys = {0x0, 'z', 'x', 'c', 'v'},
+    .caps = {0x0, 'Z', 'X', 'C', 'V'},
+    .symb = {0x0, ':', 0x0, '?', '/'}},
+  {
+    .port = 0xfd, 
+    .keys = {'a', 's', 'd', 'f', 'g'},
+    .caps = {'A', 'S', 'D', 'F', 'G'},
+    .symb = {'~', '|', '\\', '{', '}'}},
+  {
+    .port = 0xfb, 
+    .keys = {'q', 'w', 'e', 'r', 't'},
+    .caps = {'Q', 'W', 'E', 'R', 'T'},
+    .symb = {0x0, 0x0, 0x0, '<', '>'}},
+  {
+    .port = 0xf7, 
+    .keys = {'1', '2', '3', '4', '5'},
+    .caps = {0x0, 0x0, 0x0, 0x0, 0x8},
+    .symb = {'!', '@', '#', '$', '%'}},
+  {
+    .port = 0xef, 
+    .keys = {'0', '9', '8', '7', '6'},
+    .caps = {0x0, 0x0, 0x9, 0x0, 0x0},
+    .symb = {'_', ')', '(', '\'', '&'}},
+  {
+    .port = 0xdf, 
+    .keys = {'p', 'o', 'i', 'u', 'y'},
+    .caps = {'P', 'O', 'I', 'U', 'Y'},
+    .symb = {'\"', ';', 0x0, ']', '['}},
+  {
+    .port = 0xbf, 
+    .keys = {'\n', 'l', 'k', 'j', 'h'},
+    .caps = {'\n', 'L', 'K', 'J', 'H'},
+    .symb = {'\n', '=', '+', '-', '^'}},
+  {
+    .port = 0x7f, 
+    .keys = {' ', 0x0, 'm', 'n', 'b'},
+    .caps = {' ', 0x0, 'M', 'N', 'B'},
+    .symb = {' ', 0x0, '.', '\'', '*'}},
 };
 
 void cls();
@@ -64,6 +98,18 @@ int read_cmd();
 
 int main() {
   char *p;
+
+  __asm
+    .area _GSFINAL
+    .db 0xde, 0xad, 0xbe, 0xef
+    .area _CODE
+    .rept 526
+    nop
+    .endm
+    di
+    call gsinit
+  __endasm;  
+
   cls();
   for (;;) {
     read_cmd();
@@ -196,9 +242,12 @@ char scan(unsigned char port) {
 }
 
 char getchar() {
-  static unsigned char scanline;
   static char last_key = '\0';
   static unsigned char key_wait_timer = 0x00;
+  
+  unsigned char scanline;
+  unsigned char caps_shift = (scan(0xfe) & 0x01) == 0;
+  unsigned symbol_shift    = (scan(0x7f) & 0x02) == 0;
   
   if (key_wait_timer > 0) key_wait_timer--;
   
@@ -206,14 +255,12 @@ char getchar() {
     t_keyboard_row *row = keyboard_layout + r;
     scanline = scan(row->port);
     for (unsigned char i = 0; i < KEYBOARD_KEYS_PER_ROW; i++) {
-      if (row->keys[i] != '#') {
-        if ((scanline & 0x01) == 0) {
-          char key = row->keys[i];
-          if (last_key != key || key_wait_timer == 0) {
-            last_key = key;
-            key_wait_timer = 100;
-            return key;
-          }
+      if ((scanline & 0x01) == 0) {
+        char key = symbol_shift ? row->symb[i] : caps_shift ? row->caps[i] : row->keys[i];
+        if (key != 0x0 && (last_key != key || key_wait_timer == 0)) {
+          last_key = key;
+          key_wait_timer = 100;
+          return key;
         }
       }
       scanline = scanline >> 1;
