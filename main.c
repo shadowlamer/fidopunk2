@@ -1,20 +1,14 @@
 #include <string.h>
-
 #include "scr_addr.h"
-
 #include "keyboard.h"
 //#link "keyboard.c"
-
 #include "io.h"
 //#link "io.c"
-
 #include "command.h"
 //#link "command.c"
-
-
 #include "fs.h"
 //#link "fs.c"
-
+#include "messages.h"
 
 
 #define MAX_CMD_LEN 128
@@ -38,6 +32,7 @@ int main() {
   init_fs();
  
   cls();
+  printf(msg_moto);
   
   for (;;) {
     new_line();

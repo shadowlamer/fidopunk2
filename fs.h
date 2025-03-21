@@ -1,5 +1,5 @@
-#ifndef FS_H
-#define FS_H
+#ifndef __FS_H
+#define __FS_H
 
 #include <stddef.h>
 
@@ -38,4 +38,4 @@ void list_dir(int dir_index);
 int find_node_in_dir(int dir_index, const char *name);
 int change_dir(int current_dir_index, const char *name);
 
-#endif // FS_H
+#endif // __FS_H
