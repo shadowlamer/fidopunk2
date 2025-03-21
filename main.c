@@ -39,8 +39,6 @@ int main() {
  
   cls();
   
-  list_dir(0);
-  
   for (;;) {
     new_line();
     argc = parse_cmd();

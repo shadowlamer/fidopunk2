@@ -1,6 +1,15 @@
 #include "command.h"
+#include "fs.h"
 
 #define MAX_ARGS 32
+
+// Список поддерживаемых команд
+command_entry supported_commands[] = {
+    {"echo", "[args] - Print arguments", handle_echo},
+    {"help", "       - Show help",       handle_help},
+    {"ls", "  [dir]  - List dir",        handle_ls},
+    {NULL} // Окончание списка
+};
 
 // Пример функций обработки команд
 void handle_echo(int argc, char *argv[]) {
@@ -13,8 +22,16 @@ void handle_echo(int argc, char *argv[]) {
 void handle_help(int argc, char *argv[]) {
     (void) argc, argv;
     printf("Supported commands:\n");
-    printf("  echo [args] - Print arguments\n");
-    printf("  help        - Show this help message\n");
+    for (command_entry *p = supported_commands; p->name != NULL; p++) {
+        if (p->description != NULL) {
+            printf("  %s %s\n", p->name, p->description);
+        }
+    }
+}
+
+void handle_ls(int argc, char *argv[]) {
+    (void) argc, argv;
+    list_dir(0);
 }
 
 void handle_unknown(int argc, char *argv[]) {
@@ -23,12 +40,6 @@ void handle_unknown(int argc, char *argv[]) {
     printf("Type 'help' for a list of supported commands.\n");
 }
 
-// Список поддерживаемых команд
-command_entry supported_commands[] = {
-    {"echo", handle_echo},
-    {"help", handle_help},
-    {NULL, NULL} // Окончание списка
-};
 
 // Функция для обработки команд
 void process_command(int argc, char *argv[]) {

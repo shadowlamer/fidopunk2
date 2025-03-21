@@ -9,6 +9,7 @@ typedef void (*command_handler)(int argc, char *argv[]);
 // Структура для описания команды
 typedef struct {
     const char *name;           // Имя команды
+    const char *description;    // Описание команды
     command_handler handler;    // Функция обработки команды
 } command_entry;
 
