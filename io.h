@@ -21,14 +21,17 @@ typedef struct {
 void cls();
 void putchar_at(char c, unsigned char x, unsigned char y, char attr);
 void putchar_at_cursor(char c);
-int putchar(int c);
+int  putchar(int c);
+void puts(const char *str);
+void print_int(int n);
 void set_cursor(unsigned char x, unsigned char y);
 void hide_cursor();
 void cursor_left();
 void cursor_right();
-void printz(char *s, unsigned char x, unsigned char y);
+void printf(char *s, ...);
 void scroll();
 char getchar();
-int isspace(int c);
+int  isspace(int c);
+void new_line();
 
 #endif // __IO_H

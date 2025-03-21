@@ -31,9 +31,9 @@ int main() {
 #include "filler.h"
   cls();
   for (;;) {
-    scroll();
+    new_line();
     argc = parse_cmd();
-    scroll();
+    new_line();
     process_command(argc, argv);
   }
   return 0;
@@ -51,8 +51,7 @@ int read_cmd() {
     switch (key) {
       case '\n':  
         cmd_buf[len] = 0x00;
-        hide_cursor();
-        scroll();
+        new_line();
         return len + 1;
       case 0x08:
         if (len <= 0) break;
@@ -112,6 +111,6 @@ int parse_cmd() {
 }
 
 void prompt() {
-  printz(PROMPT, 0, SCR_CHAR_HEIGHT - 1);
-  set_cursor(strlen(PROMPT), SCR_CHAR_HEIGHT - 1);
+  set_cursor(0, SCR_CHAR_HEIGHT - 1);
+  printf(PROMPT);
 }

@@ -1,15 +1,13 @@
 #include "command.h"
 
-#include <stdio.h>
-
 #define MAX_ARGS 32
 
 // Пример функций обработки команд
 void handle_echo(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
-        printz(argv[i], 0, 0);
+        printf(argv[i]);
     }
-    printz("\n", 0, 0);
+    printf("\n");
 }
 
 void handle_help(int argc, char *argv[]) {

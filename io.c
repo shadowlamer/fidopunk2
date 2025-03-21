@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include "io.h"
 
 __at (SCREEN_BUFFER_START) char screen_buf[SCREEN_BUFFER_SIZE];
@@ -65,24 +66,55 @@ void cls() {
 }
 
 
-void printz(char *s, unsigned char x, unsigned char y) {
-  for (char *p = s; *p != 0x00; p++) {
-    if (x >= SCR_CHAR_WIDTH) {
-      scroll();
-      x = 0;
-    }
-    putchar_at(*p, x, y, DEFAULT_ATTR);
-    x++;
-  }
-}
+// Упрощенная версия printf
+void printf(const char *format, ...) {
+    va_list args; // Список аргументов переменной длины
+    va_start(args, format);
 
+    while (*format) {
+        if (*format == '%') {
+            format++; // Переходим к следующему символу после '%'
+            switch (*format) {
+                case 'c': { // Вывод символа
+                    char c = (char)va_arg(args, int); // Получаем символ
+                    putchar(c);
+                    break;
+                }
+                case 's': { // Вывод строки
+                    const char *str = va_arg(args, const char*); // Получаем строку
+                    puts(str);
+                    break;
+                }
+                case 'd': { // Вывод целого числа
+                    int num = va_arg(args, int); // Получаем число
+                    print_int(num);
+                    break;
+                }
+                case '%': { // Вывод символа '%'
+                    putchar('%');
+                    break;
+                }
+                default: { // Неизвестный спецификатор
+                    putchar('%');
+                    putchar(*format);
+                    break;
+                }
+            }
+        } else {
+            // Обычный символ, просто выводим его
+            putchar(*format);
+        }
+        format++;
+    }
+
+    va_end(args); // Завершаем работу со списком аргументов
+}
 void scroll() {
   __asm
     ld b, #SCR_CHAR_HEIGHT
     call 0x0dfe
   __endasm;  
   memset(screen_attr_buf, DEFAULT_ATTR, ATTR_SCREEN_BUFFER_SIZE);
-  cursor.x = 0;
 }
 
 
@@ -118,10 +150,47 @@ int isspace(int c) {
 int putchar(int c) {
   switch (c) {
     case '\n':
-      scroll();
+      new_line();
       break;
     default:
       putchar_at_cursor(c);
   }
   return c;
+}
+
+// Функция для вывода строки с помощью putchar
+void puts(const char *str) {
+    while (*str) {
+        putchar(*str++);
+    }
+}
+
+void print_int(int n) {
+    // Буфер для хранения цифр числа
+    char buffer[20]; // Максимальная длина int (включая знак) — 11 символов
+    int index = 0;
+    if (n == 0) {
+        putchar('0'); // Особый случай: число 0
+        return;
+    }
+    // Обработка отрицательных чисел
+    if (n < 0) {
+        putchar('-');
+        n = -n; // Преобразуем число в положительное
+    }
+    // Заполняем буфер цифрами числа в обратном порядке
+    while (n > 0) {
+        buffer[index++] = '0' + (n % 10); // Сохраняем последнюю цифру
+        n /= 10; // Убираем последнюю цифру
+    }
+    // Выводим цифры в правильном порядке
+    while (index > 0) {
+        putchar(buffer[--index]);
+    }
+}
+
+void new_line() {
+  hide_cursor();
+  cursor.x = 0;
+  scroll();
 }
