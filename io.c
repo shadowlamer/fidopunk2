@@ -6,7 +6,7 @@ __at (EMBEDDED_FONT_START) char font[];
 
 static t_point cursor = {.x=-1, .y=-1};
 
-void putchar(char c, unsigned char x, unsigned char y, char attr) {
+void putchar_at(char c, unsigned char x, unsigned char y, char attr) {
   char *p_font = font;
   char *p_char = p_font + (c * 8);
   char *p_scr = (char *)screen_line_addrs[y * 8];
@@ -38,7 +38,7 @@ void cursor_right() {
 }
 
 void putchar_at_cursor(char c) {
-  putchar(c, cursor.x, cursor.y, DEFAULT_ATTR);
+  putchar_at(c, cursor.x, cursor.y, DEFAULT_ATTR);
   cursor_right();
 }
 
@@ -46,7 +46,7 @@ void set_cursor(unsigned char x, unsigned char y) {
   hide_cursor();
   cursor.x = x;
   cursor.y = y;
-  putchar (CURSOR, x, y, CURSOR_ATTR); 
+  putchar_at(CURSOR, x, y, CURSOR_ATTR); 
   
 }
 
@@ -55,7 +55,7 @@ void hide_cursor() {
       && cursor.y < SCR_CHAR_HEIGHT 
       && cursor.x >= 0 
       && cursor.x < SCR_CHAR_WIDTH) {
-  putchar(' ', cursor.x, cursor.y, DEFAULT_ATTR);
+  putchar_at(' ', cursor.x, cursor.y, DEFAULT_ATTR);
   }
 }
 
@@ -71,7 +71,7 @@ void printz(char *s, unsigned char x, unsigned char y) {
       scroll();
       x = 0;
     }
-    putchar(*p, x, y, DEFAULT_ATTR);
+    putchar_at(*p, x, y, DEFAULT_ATTR);
     x++;
   }
 }
@@ -81,6 +81,8 @@ void scroll() {
     ld b, #SCR_CHAR_HEIGHT
     call 0x0dfe
   __endasm;  
+  memset(screen_attr_buf, DEFAULT_ATTR, ATTR_SCREEN_BUFFER_SIZE);
+  cursor.x = 0;
 }
 
 
@@ -106,4 +108,20 @@ char getchar() {
     // Если это новое нажатие
     last_key = current_key; // Обновляем состояние последней нажатой клавиши
     return current_key;     // Возвращаем код клавиши
+}
+
+int isspace(int c) {
+    // Проверяем, является ли символ одним из пробельных символов
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');
+}
+
+int putchar(int c) {
+  switch (c) {
+    case '\n':
+      scroll();
+      break;
+    default:
+      putchar_at_cursor(c);
+  }
+  return c;
 }

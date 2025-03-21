@@ -8,29 +8,33 @@
 #include "io.h"
 //#link "io.c"
 
+#include "command.h"
+//#link "command.c"
+
 
 #define MAX_CMD_LEN 128
-#define MAX_PARAMS 16
+#define MAX_ARGS 16
 
 #define PROMPT "$ "
 
 static char cmd_buf[MAX_CMD_LEN];
-static char *argv[MAX_PARAMS];
+static char *argv[MAX_ARGS + 1]; // Статический массив для argv (+1 для NULL)
 static unsigned char argc; 
 
 
+void prompt();
 int read_cmd();
-
+int parse_cmd();
 
 int main() {
-  char *p;
+  int argc;
 #include "filler.h"
   cls();
   for (;;) {
-    read_cmd();
-    p = cmd_buf;
-    p = strtok(p, " ");
-    printz(p, 0, 0);
+    scroll();
+    argc = parse_cmd();
+    scroll();
+    process_command(argc, argv);
   }
   return 0;
 }
@@ -40,9 +44,8 @@ int read_cmd() {
 
   int len = 0;
   char key;
-  printz(PROMPT, 0, SCR_CHAR_HEIGHT - 1);
-  set_cursor(strlen(PROMPT), SCR_CHAR_HEIGHT - 1);
   
+  prompt();
   for (;;) {
     key = getchar();
     switch (key) {
@@ -66,3 +69,49 @@ int read_cmd() {
   } 
 }
 
+int parse_cmd() {
+    char *buf = cmd_buf;              // Указатель на начало буфера
+    int arg_count = 0;                // Счетчик аргументов
+    unsigned char in_quotes = 0;      // Флаг для обработки кавычек
+    int len = read_cmd();             // Читаем команду и получаем её длину
+  
+    if (len == 0) {
+        return 0;                     // Если команда пустая, возвращаем argc = 0
+    }
+
+    // Проходим по каждому символу в буфере
+    for (int i = 0; i < len && arg_count < MAX_ARGS; i++) {
+        char c = buf[i];
+
+        // Пропускаем пробелы, если мы не внутри кавычек
+        if (!in_quotes && isspace(c)) {
+            buf[i] = '\0'; // Заменяем пробел на нулевой символ (конец строки)
+            continue;
+        }
+
+        // Начинаем новый аргумент
+        if (buf[i] != '\0' && (i == 0 || buf[i - 1] == '\0')) {
+            if (arg_count >= MAX_ARGS) {
+                break; // Достигнут лимит аргументов
+            }
+            argv[arg_count++] = &buf[i]; // Сохраняем указатель на начало аргумента
+        }
+
+        // Обработка кавычек
+        if (c == '"') {
+            in_quotes = !in_quotes; // Переключаем флаг кавычек
+            buf[i] = '\0';          // Удаляем кавычку из строки
+        }
+    }
+
+    // Устанавливаем последний аргумент как NULL (требование для argv)
+    argv[arg_count] = NULL;
+
+    // Возвращаем количество аргументов
+    return arg_count;
+}
+
+void prompt() {
+  printz(PROMPT, 0, SCR_CHAR_HEIGHT - 1);
+  set_cursor(strlen(PROMPT), SCR_CHAR_HEIGHT - 1);
+}
