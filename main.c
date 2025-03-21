@@ -12,6 +12,11 @@
 //#link "command.c"
 
 
+#include "fs.h"
+//#link "fs.c"
+
+
+
 #define MAX_CMD_LEN 128
 #define MAX_ARGS 16
 
@@ -29,7 +34,13 @@ int parse_cmd();
 int main() {
   int argc;
 #include "filler.h"
+  
+  init_fs();
+ 
   cls();
+  
+  list_dir(0);
+  
   for (;;) {
     new_line();
     argc = parse_cmd();

@@ -63,6 +63,7 @@ void hide_cursor() {
 void cls() {
   memset(screen_buf, 0x00, SCREEN_BUFFER_SIZE);
   memset(screen_attr_buf, DEFAULT_ATTR, ATTR_SCREEN_BUFFER_SIZE);
+  set_cursor(0, SCR_CHAR_HEIGHT - 1);
 }
 
 
