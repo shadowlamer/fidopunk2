@@ -1,0 +1,4 @@
+*.tap
+*.json
+*.bin
+node_modules
