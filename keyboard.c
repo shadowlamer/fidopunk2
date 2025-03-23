@@ -3,9 +3,9 @@
 static t_keyboard_row keyboard_layout[KEYBOARD_NUM_ROWS] = {
   { // 0
     .port = 0xfe, 
-    .keys = {0x0, 'z', 'x', 'c', 'v'},
-    .caps = {0x0, 'Z', 'X', 'C', 'V'},
-    .symb = {0x0, ':', 0x0, '?', '/'}},
+    .keys = {0xff, 'z', 'x', 'c', 'v'},
+    .caps = {0xff, 'Z', 'X', 'C', 'V'},
+    .symb = {0xff, ':', '`', '?', '/'}},
   { // 1
     .port = 0xfd, 
     .keys = {'a', 's', 'd', 'f', 'g'},
@@ -19,12 +19,12 @@ static t_keyboard_row keyboard_layout[KEYBOARD_NUM_ROWS] = {
   { // 3
     .port = 0xf7, 
     .keys = {'1', '2', '3', '4', '5'},
-    .caps = {0x0, 0x0, 0x0, 0x0, 0x8},
+    .caps = {0x0, 0x0, 0x0, 0x0, K_LT},
     .symb = {'!', '@', '#', '$', '%'}},
   { // 4
     .port = 0xef, 
     .keys = {'0', '9', '8', '7', '6'},
-    .caps = {0x0, 0x0, 0x9, 0x0, 0x0},
+    .caps = {K_DL, 0x0, K_RT, K_UP, K_DN},
     .symb = {'_', ')', '(', '\'', '&'}},
   { // 5
     .port = 0xdf, 
@@ -36,11 +36,11 @@ static t_keyboard_row keyboard_layout[KEYBOARD_NUM_ROWS] = {
     .keys = {'\n', 'l', 'k', 'j', 'h'},
     .caps = {'\n', 'L', 'K', 'J', 'H'},
     .symb = {'\n', '=', '+', '-', '^'}},
-  { // 7
+  { // 7y
     .port = 0x7f, 
-    .keys = {' ', 0x0, 'm', 'n', 'b'},
-    .caps = {' ', 0x0, 'M', 'N', 'B'},
-    .symb = {' ', 0x0, '.', '\'', '*'}},
+    .keys = {' ', 0xff, 'm', 'n', 'b'},
+    .caps = {' ', 0xff, 'M', 'N', 'B'},
+    .symb = {' ', 0xff, '.', '\,', '*'}},
 };
 
 char scan(unsigned char port) {
@@ -57,12 +57,12 @@ char scan(unsigned char port) {
 }
 
 char getkey() {
-    // Переменные для отслеживания состояния модификаторов клавиш:
-    unsigned char caps_shift = 0;  // Флаг Caps Shift (например, для переключения регистра)
-    unsigned char symbol_shift = 0; // Флаг Symbol Shift (например, для специальных символов)
-
     unsigned char scanline; // Переменная для хранения состояния текущей строки клавиатуры
     char key = 0; // Переменная для хранения кода нажатой клавиши (результат)
+
+        // Переменные для отслеживания состояния модификаторов клавиш:
+    unsigned char caps_shift = (scan(0xfe) & 0x01) == 0;  // Флаг Caps Shift (например, для переключения регистра)
+    unsigned char symbol_shift = (scan(0x7f) & 0x02) == 0; // Флаг Symbol Shift (например, для специальных символов)
 
     // Цикл по всем строкам клавиатуры
     for (unsigned char r = 0; r < KEYBOARD_NUM_ROWS; r++) {
@@ -77,15 +77,7 @@ char getkey() {
             // Проверяем, нажата ли текущая клавиша (бит равен 0, если клавиша нажата)
             if ((scanline & 0x01) == 0) {
                 // Если нажата клавиша Caps Shift (первая строка, первая клавиша)
-                if (r == 0 && i == 0) {
-                    caps_shift = 1; // Включаем флаг Caps Shift
-                }
-                // Если нажата клавиша Symbol Shift (восьмая строка, вторая клавиша)
-                else if (r == 7 && i == 1) {
-                    symbol_shift = 1; // Включаем флаг Symbol Shift
-                }
-                // Для всех остальных клавиш определяем символ
-                else {
+                if (row->keys[i] != 0xff) {
                     // Выбираем символ в зависимости от состояния модификаторов:
                     // - Если активен Symbol Shift, берем символ из массива symb
                     // - Если активен Caps Shift, берем символ из массива caps

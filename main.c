@@ -57,7 +57,7 @@ int read_cmd() {
         cmd_buf[len] = 0x00;
         new_line();
         return len + 1;
-      case 0x08:
+      case K_DL:
         if (len <= 0) break;
         cursor_left();
         len--;
