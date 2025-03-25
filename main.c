@@ -29,9 +29,10 @@ int main() {
   int argc;
 #include "filler.h"
   
+  cls();
+
   init_fs();
  
-  cls();
   printf(msg_moto);
   
   for (;;) {

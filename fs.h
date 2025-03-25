@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 // Максимальное количество узлов в файловой системе
-#define MAX_NODES 10
+#define MAX_NODES 20
 
 // Типы узлов: файл или директория
 typedef enum {
@@ -24,9 +24,6 @@ typedef struct node {
     int next_sibling;       // Индекс следующего узла на том же уровне
 } node;
 
-// Глобальные переменные
-extern node nodes[MAX_NODES]; // Массив узлов
-extern int free_node_index;   // Индекс первого свободного узла
 
 // Функции для работы с файловой системой
 void init_fs();

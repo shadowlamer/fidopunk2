@@ -3,22 +3,59 @@
 #include "io.h"
 
 // Глобальные переменные
-node nodes[MAX_NODES]; // Массив узлов
+node nodes[MAX_NODES + 1]; // Массив узлов
 
 int pwd;
 
 // Инициализация файловой системы
 void init_fs() {
-    int dir;
+    int root;
+    int mikhailov_home;
+    int project_dir;
+    int personal_dir;
+    int var;
+    int var_log;
+    int corrupted_dir;
+    int usr;
+    int usr_bin;
+    int volkov_home;  
+  
     memset(nodes, 0, sizeof(nodes)); // Обнуляем массив узлов
-    // Создаем корневую директорию
-    pwd = create_node("/", NODE_DIR, -1);
+// Корневой каталог
+    root = make_dir(-1, "/");
 
-    dir = make_dir(pwd, "/etc");
-    touch(dir, "/etc/passwd", "hello!");
+    // Домашний каталог Mikhailov
+    mikhailov_home = make_dir(root, "/mikhailov");
 
-    make_dir(pwd, "/home");
-    make_dir(pwd, "/tmp");
+    // Проект Echo
+    project_dir = make_dir(mikhailov_home, "/mikhailov/project");
+    touch(project_dir, "/mikhailov/project/overview.txt", "Project \"Echo\"\nObjective: Digital consciousness replication\nStages:\n- Neural recording\n- Modeling\n- Transfer");
+    touch(project_dir, "/mikhailov/project/experiment.log", "Experiment #01\nDate: 05/17/1991\nResults:\n- Neural patterns recorded\n- Secondary effects detected\n- System unstable");
+
+    // Личные файлы Mikhailov
+    personal_dir = make_dir(mikhailov_home, "/mikhailov/personal");
+    touch(personal_dir, "/mikhailov/personal/diary.txt", "May 20, 1991\nSomething strange... The system responds differently now.\n\nJune 10, 1991\nBoundaries between real and digital blur...\n\nJuly 01, 1991\nFinal attempt today...");
+    touch(personal_dir, "/mikhailov/personal/notes.sec", "[ENCRYPTED CONTENT]\nKey: XXXX-YYYY-ZZZZ\nHypothesis: Secondary consciousness emerging in system");
+
+    // Системные логи
+    var = make_dir(root, "/var");
+    var_log = make_dir(var, "/var/log");
+    touch(var_log, "/var/log/experiment.log", "[INFO] Experiment started\n[DATA] Neural stream established\n[WARN] Unstable patterns detected\n[ERROR] System response unknown");
+
+    // Поврежденные данные
+    corrupted_dir = make_dir(root, "/corrupted");
+    touch(corrupted_dir, "/corrupted/data.corrupted", "ERROR: FILE CORRUPTED\nData fragments:\nNeural match: 78%\nSecondary entity?...");
+
+    // Скрипты
+    usr = make_dir(root, "/usr");
+    usr_bin = make_dir(usr, "/usr/bin");
+    touch(usr_bin, "check_system.sh", "#!/bin/sh\necho \"System stability check\"\nif [ $(random 1 100) -lt 80 ]; then\necho \"Warning: Instability detected\"\nfi");
+
+    // Файлы Volkov
+    volkov_home = make_dir(root, "/volkov");
+    touch(volkov_home, "/volkov/notes.txt", "Concerns about experiment data\nUnusual activity logs\nNeed to discuss with Dr. Mikhailov");
+  
+    pwd = root;
 }
 
 int get_pwd() {

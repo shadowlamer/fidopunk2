@@ -92,6 +92,6 @@ void process_command(int argc, char *argv[]) {
 
 void print_usage(t_command_entry *ce) {
     if (ce->description != NULL) {
-        printf("  %s %s\n", ce->name, ce->description);
+        printf(" %s %s\n", ce->name, ce->description);
     }
 }
