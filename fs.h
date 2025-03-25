@@ -32,10 +32,13 @@ extern int free_node_index;   // Индекс первого свободног�
 void init_fs();
 int create_node(const char *name, node_type type, int parent_index);
 void add_node_to_dir(int dir_index, int new_node_index);
-void make_dir(int current_dir_index, const char *name);
-void touch(int current_dir_index, const char *name, const char *content);
+int make_dir(int current_dir_index, const char *name);
+int touch(int current_dir_index, const char *name, const char *content);
 void list_dir(int dir_index);
-int find_node_in_dir(int dir_index, const char *name);
+void cat_file(int file_index);
+int find_node(const char *name);
+int find_empty_node();
+int get_pwd();
 int change_dir(int current_dir_index, const char *name);
 
 #endif // __FS_H
