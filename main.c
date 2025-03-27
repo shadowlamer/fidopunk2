@@ -29,6 +29,10 @@ int main() {
   int argc;
 #include "filler.h"
   
+  set_cursor(0, SCR_CHAR_HEIGHT - 1);
+  printf("Press any key...");
+  while (!getchar());
+  
   cls();
 
   init_fs();
