@@ -159,7 +159,7 @@ char *compose_path(const char *name) {
 void cat_file(const char *name){
   int file_index = find_node(name);
     if (file_index == -1 || nodes[file_index].type != NODE_FILE) {
-      printf("No such file: %s", nodes[file_index].name);
+      printf("No such file: %s", name_buf);
         return; // Без вывода сообщений
     }
   printf("%s", nodes[file_index].content);
