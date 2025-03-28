@@ -10,6 +10,7 @@ char name_buf[128];
 // Инициализация файловой системы
 void init_fs() {
     int root;
+    int home;
     int mikhailov_home;
     int project_dir;
     int personal_dir;
@@ -24,18 +25,24 @@ void init_fs() {
 // Корневой каталог
     root = make_dir(-1, "/");
 
+    home = make_dir(root, "/home");
+  
     // Домашний каталог Mikhailov
-    mikhailov_home = make_dir(root, "/mikhailov");
+    mikhailov_home = make_dir(home, "/home/mikh");
 
     // Проект Echo
     project_dir = make_dir(mikhailov_home, "/mikhailov/project");
-    touch(project_dir, "/mikhailov/project/overview.txt", "Project \"Echo\"\nObjective: Digital consciousness replication\nStages:\n- Neural recording\n- Modeling\n- Transfer");
-    touch(project_dir, "/mikhailov/project/experiment.log", "Experiment #01\nDate: 05/17/1991\nResults:\n- Neural patterns recorded\n- Secondary effects detected\n- System unstable");
+    touch(project_dir, "/home/mikh/project/overview.txt", "Project \"Echo\"\nObjective: Digital consciousness replication\nStages:\n- Neural recording\n- Modeling\n- Transfer");
+    touch(project_dir, "/home/mikh/project/experiment.log", "Experiment #01\nDate: 05/17/1991\nResults:\n- Neural patterns recorded\n- Secondary effects detected\n- System unstable");
 
     // Личные файлы Mikhailov
-    personal_dir = make_dir(mikhailov_home, "/mikhailov/personal");
-    touch(personal_dir, "/mikhailov/personal/diary.txt", "May 20, 1991\nSomething strange... The system responds differently now.\n\nJune 10, 1991\nBoundaries between real and digital blur...\n\nJuly 01, 1991\nFinal attempt today...");
-    touch(personal_dir, "/mikhailov/personal/notes.sec", "[ENCRYPTED CONTENT]\nKey: XXXX-YYYY-ZZZZ\nHypothesis: Secondary consciousness emerging in system");
+    personal_dir = make_dir(mikhailov_home, "/home/mikh/personal");
+    touch(personal_dir, "/home/mikh/personal/diary.txt", "May 20, 1991\nSomething strange... The system responds differently now.\n\nJune 10, 1991\nBoundaries between real and digital blur...\n\nJuly 01, 1991\nFinal attempt today...");
+    touch(personal_dir, "/home/mikh/personal/notes.sec", "[ENCRYPTED CONTENT]\nKey: XXXX-YYYY-ZZZZ\nHypothesis: Secondary consciousness emerging in system");
+
+    // Файлы Volkov
+    volkov_home = make_dir(home, "/home/volk");
+    touch(volkov_home, "/home/volk/notes.txt", "Concerns about experiment data\nUnusual activity logs\nNeed to discuss with Dr. Mikhailov");
 
     // Системные логи
     var = make_dir(root, "/var");
@@ -50,11 +57,7 @@ void init_fs() {
     usr = make_dir(root, "/usr");
     usr_bin = make_dir(usr, "/usr/bin");
     touch(usr_bin, "check_system.sh", "#!/bin/sh\necho \"System stability check\"\nif [ $(random 1 100) -lt 80 ]; then\necho \"Warning: Instability detected\"\nfi");
-
-    // Файлы Volkov
-    volkov_home = make_dir(root, "/volkov");
-    touch(volkov_home, "/volkov/notes.txt", "Concerns about experiment data\nUnusual activity logs\nNeed to discuss with Dr. Mikhailov");
-  
+ 
     pwd = root;
 }
 

@@ -5,12 +5,12 @@
 
 // Список поддерживаемых команд
 t_command_entry supported_commands[] = {
-    {"echo", "[args] - Print arguments",   handle_echo},
     {"help", "       - Show help",         handle_help},
     {"cat", "[file]  - Show file content", handle_cat},
-    {"ls", "[dir]    - List dir",          handle_ls},
     {"cd", "[dir]    - Change dir",        handle_cd},
-    {"pwd", "[dir]   - Show current dir",  handle_pwd},
+    {"echo", "[args] - Print arguments",   handle_echo},
+    {"ls", "[dir]    - List dir",          handle_ls},
+    {"pwd", "        - Show current dir",  handle_pwd},
     {NULL} // Окончание списка
 };
 
