@@ -4,8 +4,8 @@
 
 // Глобальные переменные
 node nodes[MAX_NODES + 1]; // Массив узлов
-
 int pwd;
+char name_buf[128];
 
 // Инициализация файловой системы
 void init_fs() {
@@ -123,8 +123,10 @@ int touch(int current_dir_index, const char *name, const char *content) {
 }
 
 // Функция для вывода содержимого директории
-void list_dir(int dir_index) {
+void list_dir(const char *name) {
     int current;
+
+    int dir_index = find_node(name) ;
   
     if (nodes[dir_index].type != NODE_DIR) {
       printf("%s is not a directory.", nodes[dir_index].name);
@@ -143,9 +145,21 @@ void list_dir(int dir_index) {
     }
 }
 
-void cat_file(int file_index){
-    if (nodes[file_index].type != NODE_FILE) {
-      printf("%s is not a file.", nodes[file_index].name);
+char *compose_path(const char *name) {
+    if (name[0] == '/') { // абсолютный путь
+        strcpy(name_buf, name);
+    } else {
+        strcpy(name_buf, nodes[pwd].name);
+        if (name_buf[strlen(name_buf) - 1] != '/') strcat(name_buf, "/");
+        strcat(name_buf, name);
+    }
+    return name_buf;
+}
+
+void cat_file(const char *name){
+  int file_index = find_node(name);
+    if (file_index == -1 || nodes[file_index].type != NODE_FILE) {
+      printf("No such file: %s", nodes[file_index].name);
         return; // Без вывода сообщений
     }
   printf("%s", nodes[file_index].content);
@@ -153,22 +167,38 @@ void cat_file(int file_index){
 
 // Функция для поиска узла по имени в текущей директории
 int find_node(const char *name) {
+    char *path = compose_path(name);
     for (int i = 0; i < MAX_NODES; i++) {
-        if (strcmp(nodes[i].name, name) == 0) return i;
+        if (strcmp(nodes[i].name, path) == 0) return i;
     }
     return -1;
 }
 
 // Функция для перехода в другую директорию
-//int change_dir(int current_dir_index, const char *name) {
-//    int target = find_node_in_dir(current_dir_index, name);
-//
-//    if (strcmp(name, "..") == 0) {
-//        return nodes[current_dir_index].parent_index != -1 ? nodes[current_dir_index].parent_index : current_dir_index;
-//    }
-//
-//    if (target == -1 || nodes[target].type != NODE_DIR) {
-//        return current_dir_index; // Без вывода сообщений
-//    }
-//    return target;
-//}
+int change_dir(const char *name) {
+    int target;
+
+    if (strcmp(name, ".") == 0) {
+        return pwd;
+    }
+ 
+    if (strcmp(name, "..") == 0) {
+        if (nodes[pwd].parent_index != -1) {
+          pwd = nodes[pwd].parent_index;
+        }
+        return pwd;
+    }
+
+    target = find_node(name);   
+    if (target != -1 && nodes[target].type == NODE_DIR) {
+        pwd = target;
+        return pwd; // Без вывода сообщений
+    }
+  
+    printf("No such dir: %s\n", name_buf);
+    return pwd;
+}
+
+const char *get_name(int index) {
+    return nodes[index].name;
+}

@@ -7,8 +7,10 @@
 t_command_entry supported_commands[] = {
     {"echo", "[args] - Print arguments",   handle_echo},
     {"help", "       - Show help",         handle_help},
-    {"cat", " [file] - Show file content", handle_cat},
-    {"ls", "  [dir]  - List dir",          handle_ls},
+    {"cat", "[file]  - Show file content", handle_cat},
+    {"ls", "[dir]    - List dir",          handle_ls},
+    {"cd", "[dir]    - Change dir",        handle_cd},
+    {"pwd", "[dir]   - Show current dir",  handle_pwd},
     {NULL} // Окончание списка
 };
 
@@ -27,20 +29,28 @@ void handle_help(int argc, char *argv[], void *ce) {
     for (t_command_entry *p = supported_commands; p->name != NULL; p++) print_usage(p);
 }
 
+void handle_pwd(int argc, char *argv[], void *ce) {
+    (void) argc, argv, ce;
+    printf("%s\n", get_name(get_pwd()));
+}
+
+void handle_cd(int argc, char *argv[], void *ce) {
+  switch (argc) {
+    case 2:
+      change_dir(argv[1]);
+      break;
+    default:
+      print_usage((t_command_entry *) ce);
+  }
+}
+
 void handle_ls(int argc, char *argv[], void *ce) {
-  int dir;
   switch (argc) {
     case 1:
-      dir = get_pwd();
-      list_dir(dir);
+      list_dir(get_name(get_pwd()));
       break;
     case 2:
-      dir = find_node(argv[1]);
-      if (dir == -1) {
-        printf("No such directory.");
-      } else {
-        list_dir(dir);
-      }
+      list_dir(argv[1]);
       break;
     default:
       print_usage((t_command_entry *) ce);
@@ -48,15 +58,9 @@ void handle_ls(int argc, char *argv[], void *ce) {
 }
 
 void handle_cat(int argc, char *argv[], void *ce) {
-  int file;
   switch (argc) {
     case 2:
-      file = find_node(argv[1]);
-      if (file == -1) {
-        printf("No such file.");
-      } else {
-        cat_file(file);
-      }
+      cat_file(argv[1]);
       break;
     default:
       print_usage((t_command_entry *) ce);

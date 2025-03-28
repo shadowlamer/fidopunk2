@@ -31,11 +31,12 @@ int create_node(const char *name, node_type type, int parent_index);
 void add_node_to_dir(int dir_index, int new_node_index);
 int make_dir(int current_dir_index, const char *name);
 int touch(int current_dir_index, const char *name, const char *content);
-void list_dir(int dir_index);
-void cat_file(int file_index);
+void list_dir(const char *name);
+void cat_file(const char *name);
 int find_node(const char *name);
+int change_dir(const char *name);
 int find_empty_node();
+char *get_name(int index);
 int get_pwd();
-int change_dir(int current_dir_index, const char *name);
 
 #endif // __FS_H

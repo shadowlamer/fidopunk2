@@ -121,5 +121,5 @@ int parse_cmd() {
 
 void prompt() {
   set_cursor(0, SCR_CHAR_HEIGHT - 1);
-  printf(PROMPT);
+  printf("%s%s", get_name(get_pwd()), PROMPT);
 }
