@@ -1,0 +1,2 @@
+To gain access to /secure/, use the command 'sudo' with password 'admin123'.
+Password hint: Check diary.txt.

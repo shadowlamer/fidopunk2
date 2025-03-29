@@ -9,7 +9,7 @@
 #include "fs.h"
 //#link "fs.c"
 #include "messages.h"
-
+//#link "initfs.c"
 
 #define MAX_CMD_LEN 128
 #define MAX_ARGS 16
