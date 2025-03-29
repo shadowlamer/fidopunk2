@@ -6,11 +6,14 @@
 // Список поддерживаемых команд
 t_command_entry supported_commands[] = {
     {"help", "       - Show help",         handle_help},
-    {"cat", "[file]  - Show file content", handle_cat},
+    {"cat", "<file>  - Show file content", handle_cat},
     {"cd", "[dir]    - Change dir",        handle_cd},
     {"echo", "[args] - Print arguments",   handle_echo},
+    {"decrypt", "<file> <passwd>\n"
+    "  - Decrypt file with password",      handle_decrypt},
     {"ls", "[dir]    - List dir",          handle_ls},
     {"pwd", "        - Show current dir",  handle_pwd},
+    {"show_hidden", NULL,  handle_show_hidden},
     {NULL} // Окончание списка
 };
 
@@ -27,6 +30,28 @@ void handle_help(int argc, char *argv[], void *ce) {
     (void) argc, argv, ce;
     printf("Supported commands:\n");
     for (t_command_entry *p = supported_commands; p->name != NULL; p++) print_usage(p);
+}
+
+void handle_decrypt(int argc, char *argv[], void *ce) {
+  char *content;
+  switch (argc) {
+    case 3:
+      content = cat_file(argv[1]);
+      if (content == NULL) {
+            printf("No such file: %s", argv[1]);
+      } else {
+            printf(encrypt(content, argv[2]));
+      }
+      break;
+    default:
+      print_usage((t_command_entry *) ce);
+  }
+}
+
+void handle_show_hidden(int argc, char *argv[], void *ce) {
+    (void) argc, argv, ce;
+    printf("Hidden files display enabled.");
+    set_show_hidden(1);
 }
 
 void handle_pwd(int argc, char *argv[], void *ce) {
@@ -58,9 +83,15 @@ void handle_ls(int argc, char *argv[], void *ce) {
 }
 
 void handle_cat(int argc, char *argv[], void *ce) {
+  char *content;
   switch (argc) {
     case 2:
-      cat_file(argv[1]);
+      content = cat_file(argv[1]);
+      if (content == NULL) {
+            printf("No such file: %s", argv[1]);
+      } else {
+            printf(content);
+      }
       break;
     default:
       print_usage((t_command_entry *) ce);
@@ -96,6 +127,6 @@ void process_command(int argc, char *argv[]) {
 
 void print_usage(t_command_entry *ce) {
     if (ce->description != NULL) {
-        printf(" %s %s\n", ce->name, ce->description);
+        printf("%s %s\n", ce->name, ce->description);
     }
 }
