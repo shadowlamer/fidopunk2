@@ -10,12 +10,10 @@ INPUT_FILE="$1"
 OUTPUT_FILE="$2"
 
 # Ищем позицию начала и конца фрагмента
-START_BYTES="f3 cd 03 88"
 END_BYTES="de ad be ef"
 
 # Находим начальную позицию (в байтах)
-START_OFFSET=$(hexdump -v -e '1/1 "%02x "' "$INPUT_FILE" | tr -d '\n' | grep -oba "${START_BYTES}" | cut -d':' -f1)
-START_OFFSET=$((${START_OFFSET} / 3))
+START_OFFSET=536
 
 # Находим конечную позицию (в байтах)
 END_OFFSET=$(hexdump -v -e '1/1 "%02x "' "$INPUT_FILE" | tr -d '\n' | grep -oba "${END_BYTES}" | cut -d':' -f1)

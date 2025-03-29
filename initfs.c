@@ -14,6 +14,7 @@ void init_fs() {
     int project;
     int _hidden;
     int personal;
+    int guest;
 
     root = make_dir(-1, "/");
     secure = make_dir(root, "/secure");
@@ -38,7 +39,7 @@ void init_fs() {
         volkov = make_dir(home, "/home/volkov");
             touch(volkov, "/home/volkov/note.txt", "Concerns about experiment data\nUnusual activity logs\nNeed to discuss with Dr. Mikhailov");
         mikhailov = make_dir(home, "/home/mikhailov");
-            touch(mikhailov, "/home/mikhailov/find_hdn.txt", "Use the command 'ls -la' to reveal hidden files and directories.");
+            touch(mikhailov, "/home/mikhailov/find_hdn.txt", "Use the command 'show_hidden' to reveal hidden files and directories.");
             touch(mikhailov, "/home/mikhailov/puz_ans.txt", "A piano or keyboard.");
             touch(mikhailov, "/home/mikhailov/access.txt", "To gain access to /secure/, use the command 'sudo' with password 'admin123'.\nPassword hint: Check diary.txt.");
             project = make_dir(mikhailov, "/home/mikhailov/project");
@@ -51,5 +52,7 @@ void init_fs() {
             personal = make_dir(mikhailov, "/home/mikhailov/personal");
                 touch(personal, "/home/mikhailov/personal/diary.txt", "May 20, 1991\nSomething strange... The system responds differently now.\n\nJune 10, 1991\nBoundaries between real and digital blur...\n\nJuly 01, 1991\nFinal attempt today...\nIf this works, everything changes. If not...");
                 touch(personal, "/home/mikhailov/personal/notes.sec", "[ENCRYPTED CONTENT]\nKey: XXXX-YYYY-ZZZZ\nHypothesis: Secondary consciousness emerging in system");
+        guest = make_dir(home, "/home/guest");
+            touch(guest, "/home/guest/readme.txt", "");
 }
 
