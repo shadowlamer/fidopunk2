@@ -4,7 +4,10 @@
 #include <stddef.h>
 
 // Максимальное количество узлов в файловой системе
-#define MAX_NODES 20
+#define MAX_NODES 40
+#define NAME_BUF_SIZE 128
+
+extern int pwd;
 
 // Типы узлов: файл или директория
 typedef enum {
@@ -32,11 +35,13 @@ void add_node_to_dir(int dir_index, int new_node_index);
 int make_dir(int current_dir_index, const char *name);
 int touch(int current_dir_index, const char *name, const char *content);
 void list_dir(const char *name);
-void cat_file(const char *name);
+char *cat_file(const char *name);
 int find_node(const char *name);
 int change_dir(const char *name);
 int find_empty_node();
 char *get_name(int index);
 int get_pwd();
+void set_show_hidden(char val);
+char *encrypt(char *text, char *passwd);
 
 #endif // __FS_H

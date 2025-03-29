@@ -5,7 +5,8 @@
 // Глобальные переменные
 node nodes[MAX_NODES + 1]; // Массив узлов
 int pwd;
-char name_buf[128];
+char show_hidden = 0;
+char name_buf[NAME_BUF_SIZE + 1];
 
 int get_pwd() {
     return pwd;
@@ -85,10 +86,12 @@ void list_dir(const char *name) {
     current = nodes[dir_index].first_child;
 
     while (current != -1) {
-        if (nodes[current].type == NODE_DIR) {
-            printf("%s\n", nodes[current].name);
-        } else {
-            printf("%s\n", nodes[current].name);
+        if (strstr(nodes[current].name, "/.") == NULL || show_hidden) {
+            if (nodes[current].type == NODE_DIR) {
+                printf("%s\n", nodes[current].name);
+            } else {
+                printf("%s\n", nodes[current].name);
+            }
         }
         current = nodes[current].next_sibling;
     }
@@ -105,13 +108,12 @@ char *compose_path(const char *name) {
     return name_buf;
 }
 
-void cat_file(const char *name){
+const char *cat_file(const char *name){
   int file_index = find_node(name);
     if (file_index == -1 || nodes[file_index].type != NODE_FILE) {
-      printf("No such file: %s", name_buf);
-        return; // Без вывода сообщений
+        return NULL; // Без вывода сообщений
     }
-  printf("%s", nodes[file_index].content);
+  return nodes[file_index].content;
 }
 
 // Функция для поиска узла по имени в текущей директории
@@ -141,7 +143,7 @@ int change_dir(const char *name) {
     target = find_node(name);   
     if (target != -1 && nodes[target].type == NODE_DIR) {
         pwd = target;
-        return pwd; // Без вывода сообщений
+        return pwd;
     }
   
     printf("No such dir: %s\n", name_buf);
@@ -150,4 +152,16 @@ int change_dir(const char *name) {
 
 const char *get_name(int index) {
     return nodes[index].name;
+}
+
+void set_show_hidden(char val) {
+    show_hidden = val;
+}
+
+char *encrypt(char *text, char *passwd) {
+    memset(name_buf, 0x00, NAME_BUF_SIZE);
+    for (char i = 0; name_buf[i] != 0xff && i < NAME_BUF_SIZE; i++) {
+         name_buf[i] = text[i] ^ passwd[i % strlen(passwd)];
+    }
+    return name_buf;
 }
