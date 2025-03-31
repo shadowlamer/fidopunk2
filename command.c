@@ -13,7 +13,6 @@ t_command_entry supported_commands[] = {
     "  - Decrypt file with password",      handle_decrypt},
     {"ls", "[dir]    - List dir",          handle_ls},
     {"pwd", "        - Show current dir",  handle_pwd},
-    {"show_hidden", NULL,  handle_show_hidden},
     {NULL} // Окончание списка
 };
 
@@ -48,12 +47,6 @@ void handle_decrypt(int argc, char *argv[], void *ce) {
   }
 }
 
-void handle_show_hidden(int argc, char *argv[], void *ce) {
-    (void) argc, argv, ce;
-    printf("Hidden files display enabled.");
-    set_show_hidden(1);
-}
-
 void handle_pwd(int argc, char *argv[], void *ce) {
     (void) argc, argv, ce;
     printf("%s\n", get_name(get_pwd()));
@@ -70,16 +63,20 @@ void handle_cd(int argc, char *argv[], void *ce) {
 }
 
 void handle_ls(int argc, char *argv[], void *ce) {
-  switch (argc) {
-    case 1:
-      list_dir(get_name(get_pwd()));
-      break;
-    case 2:
-      list_dir(argv[1]);
-      break;
-    default:
+  int show_hidden = 0;
+  char *path = NULL;
+  for (int i = 1; i <  argc; i++) {
+    if (strcmp("-la", argv[i]) == 0) {
+      show_hidden = 1;
+    } else if (path == NULL) {
+      path = argv[i];
+    } else {
       print_usage((t_command_entry *) ce);
+      return;    
+    }
   }
+  if (path == NULL) path = get_name(get_pwd());
+  list_dir(path, show_hidden);  
 }
 
 void handle_cat(int argc, char *argv[], void *ce) {

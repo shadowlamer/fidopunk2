@@ -51,4 +51,3 @@ void init_fs() {
     sys = make_dir(root, "/sys");
         touch(sys, "/sys/moto", "Welcome to DemoStar OS v3.2\nMade in USSR, 1989\nType 'help' for command list.\nNote: System is experimental.\nData may be incomplete.\nSome files are encrypted.\nCaution: Do not alter system\nFiles without permission.\nError may occur otherwise.");
 }
-
