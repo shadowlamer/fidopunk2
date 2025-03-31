@@ -8,7 +8,6 @@
 //#link "command.c"
 #include "fs.h"
 //#link "fs.c"
-#include "messages.h"
 //#link "initfs.c"
 
 #define MAX_CMD_LEN 128
@@ -29,15 +28,12 @@ int main() {
   int argc;
 #include "filler.h"
   
+  init_fs();
   set_cursor(0, SCR_CHAR_HEIGHT - 1);
   printf("Press any key...");
   while (!getchar());
-  
   cls();
-
-  init_fs();
- 
-  printf(msg_moto);
+  cat_file("/sys/moto");
   
   for (;;) {
     new_line();
