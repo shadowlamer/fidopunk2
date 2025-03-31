@@ -5,7 +5,6 @@
 // Глобальные переменные
 node nodes[MAX_NODES + 1]; // Массив узлов
 int pwd;
-char show_hidden = 0;
 char name_buf[NAME_BUF_SIZE + 1];
 
 int get_pwd() {
@@ -73,13 +72,15 @@ int touch(int current_dir_index, const char *name, const char *content) {
 }
 
 // Функция для вывода содержимого директории
-void list_dir(const char *name) {
+void list_dir(const char *name, char show_hidden) {
     int current;
-
-    int dir_index = find_node(name) ;
+    int dir_index;
   
+    if (name == NULL) return;
+  
+    dir_index = find_node(name) ;  
     if (nodes[dir_index].type != NODE_DIR) {
-      printf("%s is not a directory.", nodes[dir_index].name);
+      printf("%s is not a directory.", name);
         return; // Без вывода сообщений
     }
   
@@ -152,10 +153,6 @@ int change_dir(const char *name) {
 
 const char *get_name(int index) {
     return nodes[index].name;
-}
-
-void set_show_hidden(char val) {
-    show_hidden = val;
 }
 
 char *encrypt(char *text, char *passwd) {
