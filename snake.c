@@ -5,7 +5,7 @@ __at (ATTR_SCREEN_BUFFER_START) char attributes[ATTR_SCREEN_BUFFER_SIZE];
 
 #define SNAKE_MAX_SIZE 10
 #define SNAKE_MIN_SIZE 3
-#define MAX_ENCRYPTED_CHARS 10
+#define MAX_ENCRYPTED_CHARS 100
 
 typedef enum {
   DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT
@@ -21,7 +21,7 @@ t_point snake_body[SNAKE_MAX_SIZE];
 int snake_size = SNAKE_MIN_SIZE;
 t_direction snake_direction = DIR_UP;
 t_encrypted_char encrypted_chars[MAX_ENCRYPTED_CHARS];
-int current_char = 0;
+int current_char;
 static unsigned int seed = 12345;
 
 unsigned int random() {
@@ -51,7 +51,7 @@ void init_game() {
        encrypted_chars[i].y = random() % SCR_CHAR_HEIGHT;
        putchar_at('#', encrypted_chars[i].x, encrypted_chars[i].y, DEFAULT_ATTR);
   }
-  highlight_char(current_char);
+  current_char = 0;
 }
 
 void snake_draw_body() {
@@ -100,35 +100,46 @@ void snake_move() {
 
 void snake_control() {
   switch(getkey()) {
-    case '1':
+    case 'w':
+    case 'W':
       snake_direction = DIR_UP;
       break;
-    case '2':
+    case 's':
+    case 'S':
       snake_direction = DIR_DOWN;
       break;
-    case '3':
+    case 'a':
+    case 'A':
       snake_direction = DIR_LEFT;
       break;
-    case '4':
+    case 'd':
+    case 'D':
       snake_direction = DIR_RIGHT;
       break;
   }
 }
 
-void game_loop() {
-    while (1) {
-      snake_move();
-      snake_control();
-      snake_draw_body();
-        delay(10);
+check_collision() {
+    if (snake_body[0].x == encrypted_chars[current_char].x &&
+       snake_body[0].y == encrypted_chars[current_char].y) {
+       current_char++;
+       snake_size++;
     }
 }
 
-void delay(unsigned int t) {
-  for (t;t>0;t--) {
-  __asm
-    ei
-    halt
-  __endasm;  
+void game_loop() {
+    while (1) {
+      snake_move();
+      snake_draw_body();
+      highlight_char(current_char);
+      check_collision();
+      for (int t = 0; t < 10; t++) {
+      snake_control();
+      __asm
+        ei
+        halt
+      __endasm;  
   }
+
+    }
 }

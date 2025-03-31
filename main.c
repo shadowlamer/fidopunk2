@@ -31,15 +31,12 @@ int main() {
   int argc;
 #include "filler.h"
   
-  init_game();
-  game_loop();
-  
   init_fs();
   set_cursor(0, SCR_CHAR_HEIGHT - 1);
   printf("Press any key...");
   while (!getchar());
   cls();
-  cat_file("/sys/moto");
+  printf(cat_file("/sys/moto"));
   
   for (;;) {
     new_line();
