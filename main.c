@@ -9,6 +9,9 @@
 #include "fs.h"
 //#link "fs.c"
 //#link "initfs.c"
+#include "snake.h"
+//#link "snake.c"
+
 
 #define MAX_CMD_LEN 128
 #define MAX_ARGS 16
@@ -27,6 +30,9 @@ int parse_cmd();
 int main() {
   int argc;
 #include "filler.h"
+  
+  init_game();
+  game_loop();
   
   init_fs();
   set_cursor(0, SCR_CHAR_HEIGHT - 1);
