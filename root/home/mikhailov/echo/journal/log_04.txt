@@ -1,4 +1,4 @@
-Log #4 - Feb 20, 1991        
-Memory test failed. Used up 
-all 64 KB. Needs fix. Must   
+Log #4 - Feb 20, 1991
+Memory test failed. Used up
+all 64 KB. Needs fix. Must
 optimize or lose features.

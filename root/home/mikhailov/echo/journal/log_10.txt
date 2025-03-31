@@ -1,4 +1,4 @@
-Log #10 - Mar 20, 1991       
+Log #10 - Mar 20, 1991
 System ran full day. No crash.
 Ready for next steps. What's
 next? Don't know yet...

@@ -1,4 +1,4 @@
-Log #3 - Feb 15, 1991        
-Added decision logic. System 
-made simple choices. Was     
+Log #3 - Feb 15, 1991
+Added decision logic. System
+made simple choices. Was
 proud. Stability at 80%.

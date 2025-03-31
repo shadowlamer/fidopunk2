@@ -1,10 +1,9 @@
-Useful Commands             
+Useful Commands
 ---------------------------
 
-1. 'ls' - List files         
-2. 'cd' - Change directory   
+1. 'ls' - List files
+2. 'cd' - Change directory
 3. 'cat' - View file content
-4. 'tail' - Show last lines 
 
-Remember:                   
+Remember:
 Explore system carefully!

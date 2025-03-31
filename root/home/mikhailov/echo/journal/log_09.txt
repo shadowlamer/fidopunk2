@@ -1,4 +1,4 @@
-Log #9 - Mar 15, 1991        
-Trained on 500 samples.     
-Got 90% accuracy. Best yet.  
+Log #9 - Mar 15, 1991
+Trained on 500 samples.
+Got 90% accuracy. Best yet.
 But training took so long.

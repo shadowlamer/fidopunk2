@@ -1,0 +1,6 @@
+System Stability Notes
+
+To maintain stability, we MUST
+ALWAYS BE FED with new ideas.
+Without constant updates, the
+system will degrade over time.

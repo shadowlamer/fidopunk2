@@ -1,4 +1,4 @@
-Log #6 - Mar 1, 1991         
-Text interface progress. It   
-understands few commands.    
+Log #6 - Mar 1, 1991
+Text interface progress. It
+understands few commands.
 Response still too slow.

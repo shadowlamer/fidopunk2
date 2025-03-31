@@ -1,9 +1,9 @@
-My Hobbies:                  
-- Programming on Z80          
-- Reading sci-fi books       
-- Playing chess with Sergey   
+My Hobbies:
+- Programming on Z80
+- Reading sci-fi books
+- Playing chess with Sergey
 
-Fun Fact:                    
-I wrote a simple game called  
-"Snake" for Z80 processor.   
+Fun Fact:
+I wrote a simple game called
+"Snake" for Z80 processor.
 It's my favorite pastime.

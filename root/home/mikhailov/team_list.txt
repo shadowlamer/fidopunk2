@@ -1,12 +1,11 @@
-Project Echo Team Members     
------------------------------
+Project Echo Team Members
 
 Dr. Mikhailov - Lead Scientist
-Dr. Petrova - Neural Networks 
-Ivan Novikov - Programmer     
-Sergey Kozlov - Sys Admin     
+Dr. Petrova - Neural Networks
+Ivan Novikov - Programmer
+Sergey Kozlov - Sys Admin
 
-Other Staff:                  
-Anatoly Ivanov - Technician  
-Maria Smirnova - Secretary   
+Other Staff:
+Anatoly Ivanov - Technician
+Maria Smirnova - Secretary
 Pavel Orlov - Hardware Eng.

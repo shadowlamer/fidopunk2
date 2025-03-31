@@ -1,0 +1,7 @@
+Technical Issues Log
+-----------------------------
+
+One issue is that THE FINGER
+I TOUCH sometimes causes errors
+in memory allocation. Need to
+investigate further and fix.
