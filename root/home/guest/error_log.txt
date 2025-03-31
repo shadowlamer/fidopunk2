@@ -1,0 +1,10 @@
+Error Log                   
+---------------------------
+
+1. Null pointer in line 45  
+   of main.asm file.         
+2. Memory leak in function   
+   'load_data'. Fix needed.  
+
+Tip:                         
+Use debugger tool for help.

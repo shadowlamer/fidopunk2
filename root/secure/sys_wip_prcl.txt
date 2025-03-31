@@ -1,2 +1,0 @@
-To completely erase the system, use the 'format_system' command.
-Warning: This action is irreversible and will destroy all data.

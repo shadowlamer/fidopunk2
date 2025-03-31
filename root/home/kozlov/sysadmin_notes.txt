@@ -1,0 +1,11 @@
+System Admin Notes           
+-----------------------------
+
+1. Backup tapes stored in     
+   /backup directory.          
+2. Regularly check disk space 
+   using df command.          
+3. Hidden files can be shown  
+   with 'ls -la'. Useful trick!
+
+P.S. Keep system logs clean.  

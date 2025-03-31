@@ -1,0 +1,3 @@
+Log #7 - Mar 5, 1991         
+System crashed after 4 hrs. 
+Memory leak found. Frustrating.

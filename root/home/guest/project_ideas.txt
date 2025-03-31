@@ -1,0 +1,10 @@
+Project Ideas                
+---------------------------
+
+1. Add voice recognition     
+   feature to system.         
+2. Improve memory management.
+3. Test on larger datasets. 
+
+Note:                        
+Share ideas with team leader.

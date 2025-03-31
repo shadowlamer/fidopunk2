@@ -1,0 +1,10 @@
+Dear Dr. Mikhailov,         
+Here is the system status:   
+- Disk space: OK             
+- Memory usage: High         
+- CPU load: Normal           
+
+Let me know if you need help
+with anything.               
+Sincerely,                   
+Sergey Kozlov                

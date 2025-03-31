@@ -1,0 +1,12 @@
+Hardware Issues Log          
+---------------------------
+
+1. Z80 CPU overheating issue. 
+   Fixed by adding fan.
+2. Floppy drive error.       
+   Replaced on Feb 10, 1991.
+3. Keyboard keys sticking.    
+   Cleaned on Mar 5, 1991.
+
+Notes:                        
+Report all issues to Mikhailov

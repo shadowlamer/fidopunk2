@@ -1,0 +1,4 @@
+Log #5 - Feb 25, 1991        
+Learning algo works better.  
+Trained on 100 samples.      
+Accuracy now 82%. Took long.

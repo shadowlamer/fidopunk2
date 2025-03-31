@@ -1,0 +1,8 @@
+Fun Fact                    
+---------------------------
+
+Did you know? Z80 CPU was   
+used in many retro games!   
+Even Snake ran on it...
+
+P.S. Try typing 'snake' cmd!

@@ -1,6 +1,0 @@
-Project "Echo"
-Objective: Digital consciousness replication
-Stages:
-- Neural recording
-- Modeling
-- Transfer

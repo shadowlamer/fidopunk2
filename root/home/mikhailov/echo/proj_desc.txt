@@ -1,0 +1,39 @@
+Project Name: Echo
+Version: 0.1 Alpha
+Date Initiated: Jan 15, 1991
+
+Description:
+This is an experiment to
+create a thinking machine
+using DemoStar OS and Z80 CPU
+by Dr. Mikhailov. It started
+as curiosity but grew into
+something bigger.
+
+Goals:
+To simulate basic human-like
+thoughts. To teach it learn.
+To make it talk back. Maybe
+even give it a personality.
+
+Hardware:
+Processor: Z80
+RAM: 64 KB
+Storage: 2 MB floppy disk
+
+Software:
+OS: DemoStar v3.2
+Language: Assembly
+Libraries: Math & Neural
+
+Challenges:
+Limited memory. Slow speeds.
+But we push forward. Science
+never stops. Even on old
+hardware. That's the spirit!
+
+Status:
+As of Dec 1, 1991
+We have a brain that thinks.
+Not much yet, but it's start.
+Next? Who knows...

@@ -1,0 +1,5 @@
+Log #2 - Feb 10, 1991        
+Trained it on patterns. It   
+got 75% right. Not great,    
+but shows learning ability.  
+DemoStar handled well.

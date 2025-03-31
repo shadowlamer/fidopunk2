@@ -1,0 +1,5 @@
+Log #1 - Feb 5, 1991         
+Today I coded first neural   
+model. Runs slow on Z80 but  
+works! Response time: 5 sec. 
+Not bad for start.

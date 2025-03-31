@@ -1,0 +1,10 @@
+System Tips                  
+---------------------------
+
+To access more directories,  
+try using 'sudo' command.    
+Password is 'mikhailov1991'. 
+Be careful, do not break sys!
+
+P.S. Mikhailov and Novikov  
+folders are interesting...
