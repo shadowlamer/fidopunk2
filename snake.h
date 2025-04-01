@@ -5,8 +5,7 @@
 #include "keyboard.h"
 #include "io.h"
 
-void init_game();
-void game_loop();
-void delay(unsigned int t);
+void puts_broken(const char *str);
+void snake_run(char *text);
 
 #endif //__SNAKE_H

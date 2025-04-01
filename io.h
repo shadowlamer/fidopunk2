@@ -33,5 +33,6 @@ void scroll();
 char getchar();
 int  isspace(int c);
 void new_line();
+t_point *get_cursor();
 
 #endif // __IO_H

@@ -1,5 +1,6 @@
 #include "command.h"
 #include "fs.h"
+#include "snake.h"
 
 #define MAX_ARGS 32
 
@@ -13,6 +14,7 @@ t_command_entry supported_commands[] = {
     "  - Decrypt file with password",      handle_decrypt},
     {"ls", "[dir]    - List dir",          handle_ls},
     {"pwd", "        - Show current dir",  handle_pwd},
+    {"restore", NULL,  handle_restore},
     {NULL} // Окончание списка
 };
 
@@ -44,6 +46,21 @@ void handle_decrypt(int argc, char *argv[], void *ce) {
       break;
     default:
       print_usage((t_command_entry *) ce);
+  }
+}
+
+void handle_restore(int argc, char *argv[], void *ce) {
+  char *content;
+  (void) ce;
+  switch (argc) {
+    case 2:
+      content = cat_file(argv[1]);
+      if (content == NULL) {
+            printf("No such file: %s", argv[1]);
+      } else {
+            snake_run(content);
+      }
+      break;
   }
 }
 

@@ -32,8 +32,7 @@ void cursor_left() {
 void cursor_right() {
   cursor.x++;
   if (cursor.x >= SCR_CHAR_WIDTH) {
-    cursor.x = 0;
-    scroll();
+    new_line();
   }
   set_cursor(cursor.x, cursor.y);
 }
@@ -195,3 +194,8 @@ void new_line() {
   cursor.x = 0;
   scroll();
 }
+
+t_point *get_cursor() {
+	return &cursor;
+}
+

@@ -33,6 +33,7 @@ int main() {
   
   init_fs();
   set_cursor(0, SCR_CHAR_HEIGHT - 1);
+  
   printf("Press any key...");
   while (!getchar());
   cls();
