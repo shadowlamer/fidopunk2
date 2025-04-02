@@ -1,0 +1,12 @@
+Option: Extract Data          
+------------------------------
+
+Attempt to extract all data   
+from the system. This process  
+is risky and may cause system  
+failure. If successful, data   
+can be studied further.
+
+Command: 'extract_data'
+
+Warning: System crash possible.
