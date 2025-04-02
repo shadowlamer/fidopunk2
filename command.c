@@ -65,6 +65,8 @@ void handle_restore(int argc, char *argv[], void *ce) {
           if (content == NULL) {
                 printf("No such file: %s", name);
           } else {
+                printf("\nRestoring worm running...\n");
+                printf("Use [W][A][S][D] to control worm.\n");
                 if (snake_run(content)) {
                      printf("\n\nRestore over!!!\n");
                 } else {

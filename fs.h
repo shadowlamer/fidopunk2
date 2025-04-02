@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 // Максимальное количество узлов в файловой системе
-#define MAX_NODES 40
+#define MAX_NODES 50
 #define NAME_BUF_SIZE 128
 
 extern int pwd;
