@@ -34,5 +34,6 @@ char getchar();
 int  isspace(int c);
 void new_line();
 t_point *get_cursor();
+void set_attr(unsigned char x, unsigned char y, char attr);
 
 #endif // __IO_H

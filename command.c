@@ -49,16 +49,31 @@ void handle_decrypt(int argc, char *argv[], void *ce) {
   }
 }
 
+char *is_broken(char *name) {
+    return strstr(name, ".dump");
+}
+
 void handle_restore(int argc, char *argv[], void *ce) {
   char *content;
+  char *name;
   (void) ce;
   switch (argc) {
     case 2:
-      content = cat_file(argv[1]);
-      if (content == NULL) {
-            printf("No such file: %s", argv[1]);
+      name = argv[1];
+      if (is_broken(name)) {
+          content = cat_file(name);
+          if (content == NULL) {
+                printf("No such file: %s", name);
+          } else {
+                if (snake_run(content)) {
+                     printf("\n\nRestore over!!!\n");
+                } else {
+                     printf("\n\nFile restored: %s\n", name);
+                     strcpy(is_broken(name), ".restored");
+                }
+          }
       } else {
-            snake_run(content);
+        printf("File is not broken: %s", name);
       }
       break;
   }
@@ -98,13 +113,19 @@ void handle_ls(int argc, char *argv[], void *ce) {
 
 void handle_cat(int argc, char *argv[], void *ce) {
   char *content;
+  char *name;
   switch (argc) {
     case 2:
-      content = cat_file(argv[1]);
-      if (content == NULL) {
-            printf("No such file: %s", argv[1]);
+      name = argv[1];
+      if (is_broken(name)) {
+          printf("File is broken: %s", name);
       } else {
-            printf(content);
+          content = cat_file(name);
+          if (content == NULL) {
+              printf("No such file: %s", argv[1]);
+          } else {
+              printf(content);
+          }
       }
       break;
     default:

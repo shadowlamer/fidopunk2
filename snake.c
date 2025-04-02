@@ -1,22 +1,6 @@
 #include "snake.h"
 #include <string.h>
 
-__at (ATTR_SCREEN_BUFFER_START) char attributes[ATTR_SCREEN_BUFFER_SIZE];
-
-#define SNAKE_MAX_SIZE 50
-#define SNAKE_MIN_SIZE 3
-#define MAX_ENCRYPTED_CHARS 100
-
-typedef enum {
-  DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT
-} t_direction;
-
-typedef struct {
-  unsigned char x;
-  unsigned char y;
-  char symbol;
-} t_encrypted_char;
-
 t_point snake_body[SNAKE_MAX_SIZE];
 int snake_size = SNAKE_MIN_SIZE;
 t_direction snake_direction = DIR_UP;
@@ -39,7 +23,7 @@ unsigned int random() {
 }
 
 void highlight_char(int index) {
-    attributes[encrypted_chars[index].y * SCR_CHAR_WIDTH + encrypted_chars[index].x] = 0b10000010;
+    set_attr(encrypted_chars[index].x, encrypted_chars[index].y, HIGHLITED_CHAR_ATTR);
 }
 
 void snake_init() {
@@ -53,12 +37,12 @@ void snake_init() {
 
 void snake_draw_body() {
     for (int i = 0; i < snake_size; i++) {
-        attributes[snake_body[i].y * SCR_CHAR_WIDTH + snake_body[i].x] = 0b00001100;
+        set_attr(snake_body[i].x, snake_body[i].y, SNAKE_BODY_ATTR);
     }      
 }
 
 void snake_move() {
-    attributes[snake_body[snake_size - 1].y * SCR_CHAR_WIDTH + snake_body[snake_size - 1].x] = DEFAULT_ATTR;
+    set_attr(snake_body[snake_size - 1].x, snake_body[snake_size - 1].y, DEFAULT_ATTR);
     for (int i = snake_size - 1; i > 0; i--) {
         snake_body[i].y = snake_body[i - 1].y;
         snake_body[i].x = snake_body[i - 1].x;
@@ -99,38 +83,45 @@ void snake_control() {
   switch(getkey()) {
     case 'w':
     case 'W':
-      snake_direction = DIR_UP;
+      if (snake_direction != DIR_DOWN) snake_direction = DIR_UP;
       break;
     case 's':
     case 'S':
-      snake_direction = DIR_DOWN;
+      if (snake_direction != DIR_UP) snake_direction = DIR_DOWN;
       break;
     case 'a':
     case 'A':
-      snake_direction = DIR_LEFT;
+      if (snake_direction != DIR_RIGHT) snake_direction = DIR_LEFT;
       break;
     case 'd':
     case 'D':
-      snake_direction = DIR_RIGHT;
+      if (snake_direction != DIR_LEFT) snake_direction = DIR_RIGHT;
       break;
   }
 }
 
-check_collision() {
+t_snake_collision check_collision() {
     if (snake_body[0].x == encrypted_chars[current_char].x &&
        snake_body[0].y == encrypted_chars[current_char].y) {
        putchar_at(encrypted_chars[current_char].symbol, encrypted_chars[current_char].x, encrypted_chars[current_char].y, DEFAULT_ATTR);
        current_char++;
-        if (snake_size < SNAKE_MAX_SIZE)  snake_size++;
+       if (snake_size < SNAKE_MAX_SIZE)  snake_size++;
+       return COLL_CHAR; 
     }
+    for (int i = 1; i < snake_size; i++) {
+        if (snake_body[0].x == snake_body[i].x && snake_body[0].y == snake_body[i].y) return COLL_SELF;
+    }
+    return COLL_NONE;
 }
 
-void snake_loop() {
+unsigned char snake_loop() {
     while (current_char < MAX_ENCRYPTED_CHARS) {
         snake_move();
         snake_draw_body();
         highlight_char(current_char);
-        check_collision();
+        if (check_collision() == COLL_SELF) {
+          return 1;
+        }
         for (int t = 0; t < 10; t++) {
             snake_control();
             __asm
@@ -139,6 +130,7 @@ void snake_loop() {
             __endasm;  
         }
     }
+  return 0;
 }
 
 // Функция для перемешивания массива в случайном порядке
@@ -197,9 +189,9 @@ void puts_broken(const char *str) {
 }
 
 
-void snake_run(char *text) {
+unsigned char snake_run(char *text) {
     snake_init(); 
     puts_broken(text);
     shuffle_array();
-    snake_loop();
+    return snake_loop();
 }

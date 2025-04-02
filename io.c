@@ -7,6 +7,10 @@ __at (EMBEDDED_FONT_START) char font[];
 
 static t_point cursor = {.x=-1, .y=-1};
 
+void set_attr(unsigned char x, unsigned char y, char attr){
+    screen_attr_buf[y * 32 + x] = attr;
+}
+
 void putchar_at(char c, unsigned char x, unsigned char y, char attr) {
   char *p_font = font;
   char *p_char = p_font + (c * 8);
@@ -16,7 +20,7 @@ void putchar_at(char c, unsigned char x, unsigned char y, char attr) {
     *(p_scr + i * 256) = *p_char;
     p_char++;
   }
-  screen_attr_buf[y * 32 + x] = attr;
+  set_attr(x, y, attr);
 }
 
 void cursor_left() {
