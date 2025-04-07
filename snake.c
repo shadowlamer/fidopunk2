@@ -1,7 +1,7 @@
 #include "snake.h"
 #include <string.h>
 
-t_point snake_body[SNAKE_MAX_SIZE];
+t_point snake_body[SNAKE_MAX_SIZE + 1];
 int snake_size = SNAKE_MIN_SIZE;
 t_direction snake_direction = DIR_UP;
 t_encrypted_char encrypted_chars[MAX_ENCRYPTED_CHARS];
@@ -22,14 +22,10 @@ unsigned int random() {
   __endasm;
 }
 
-void highlight_char(int index) {
-    set_attr(encrypted_chars[index].x, encrypted_chars[index].y, HIGHLITED_CHAR_ATTR);
-}
-
 void snake_init() {
   for (int i=0; i<SNAKE_MIN_SIZE; i++) {
     snake_body[i].x = SCR_CHAR_WIDTH / 2;
-    snake_body[i].y = SCR_CHAR_HEIGHT / 2;
+    snake_body[i].y = SCR_CHAR_HEIGHT / 2 + i;
   }
   num_encrypted_chars = 0;
   current_char = 0;
@@ -79,8 +75,8 @@ void snake_move() {
     }
 }
 
-void snake_control() {
-  switch(getkey()) {
+void snake_control(char c) {
+  switch(c) {
     case 'w':
     case 'W':
       if (snake_direction != DIR_DOWN) snake_direction = DIR_UP;
@@ -101,34 +97,48 @@ void snake_control() {
 }
 
 t_snake_collision check_collision() {
-    if (snake_body[0].x == encrypted_chars[current_char].x &&
-       snake_body[0].y == encrypted_chars[current_char].y) {
-       putchar_at(encrypted_chars[current_char].symbol, encrypted_chars[current_char].x, encrypted_chars[current_char].y, DEFAULT_ATTR);
-       current_char++;
-       if (snake_size < SNAKE_MAX_SIZE)  snake_size++;
-       return COLL_CHAR; 
-    }
     for (int i = 1; i < snake_size; i++) {
-        if (snake_body[0].x == snake_body[i].x && snake_body[0].y == snake_body[i].y) return COLL_SELF;
+      if (snake_body[i].x == encrypted_chars[current_char].x && snake_body[i].y == encrypted_chars[current_char].y) {
+         return COLL_CHAR; 
+      }
+      if (snake_body[0].x == snake_body[i].x && snake_body[0].y == snake_body[i].y) {
+         return COLL_SELF;
+        }
     }
     return COLL_NONE;
 }
 
+char wait_key(int t) {
+    char c = 0;
+    for (t; t > 0; t--) {
+        if (c == 0) c = getkey();
+        __asm
+          ei
+          halt
+        __endasm;  
+    }
+    return c;
+}
+
 unsigned char snake_loop() {
-    while (current_char < MAX_ENCRYPTED_CHARS) {
+    putchar_at('#', encrypted_chars[current_char].x, encrypted_chars[current_char].y, HIGHLITED_CHAR_ATTR);
+    while (1) {
         snake_move();
         snake_draw_body();
-        highlight_char(current_char);
-        if (check_collision() == COLL_SELF) {
-          return 1;
+        switch (check_collision()) {
+          case COLL_SELF:
+            return 1;
+          case COLL_CHAR:
+            putchar_at(encrypted_chars[current_char].symbol, encrypted_chars[current_char].x, encrypted_chars[current_char].y, DEFAULT_ATTR);
+            current_char++;
+            putchar_at('#', encrypted_chars[current_char].x, encrypted_chars[current_char].y, HIGHLITED_CHAR_ATTR);
+            set_cursor(0, 0);
+            printf("%d,%d", encrypted_chars[current_char].x, encrypted_chars[current_char].y);
+       if (snake_size < SNAKE_MAX_SIZE) {
+           snake_size++;
+       }
         }
-        for (int t = 0; t < 10; t++) {
-            snake_control();
-            __asm
-              ei
-              halt
-            __endasm;  
-        }
+        snake_control(wait_key(10));
     }
   return 0;
 }
@@ -171,11 +181,11 @@ void puts_broken(const char *str) {
       new_line_broken();
       break;
     default:
-      if (num_encrypted_chars < MAX_ENCRYPTED_CHARS && (random() & 0x0f > 3)) {
-      encrypted_chars[num_encrypted_chars].x = get_cursor()->x;
+      if (num_encrypted_chars < MAX_ENCRYPTED_CHARS && (random() & 0x0f > 3) && cursor->x < SCR_CHAR_WIDTH) {
+      encrypted_chars[num_encrypted_chars].x = cursor->x;
       encrypted_chars[num_encrypted_chars].y = SCR_CHAR_HEIGHT - 1;
       encrypted_chars[num_encrypted_chars].symbol = c;
-      c = '#';
+      c = '_';
       num_encrypted_chars++;
       }
       putchar_at(c, cursor->x, cursor->y, DEFAULT_ATTR);
