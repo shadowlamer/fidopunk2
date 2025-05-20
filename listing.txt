@@ -1,0 +1,1302 @@
+Вот файл command.c:
+#include "command.h"
+#include "fs.h"
+#include "snake.h"
+
+#define MAX_ARGS 32
+
+// Список поддерживаемых команд
+t_command_entry supported_commands[] = {
+    {"help", "       - Show help",         handle_help},
+    {"cat", "<file>  - Show file content", handle_cat},
+    {"cd", "[dir]    - Change dir",        handle_cd},
+    {"echo", "[args] - Print arguments",   handle_echo},
+    {"decrypt", "<file> <passwd>\n"
+    "  - Decrypt file with password",      handle_decrypt},
+    {"ls", "[dir]    - List dir",          handle_ls},
+    {"pwd", "        - Show current dir",  handle_pwd},
+    {"restore", NULL,  handle_restore},
+    {NULL} // Окончание списка
+};
+
+// Пример функций обработки команд
+void handle_echo(int argc, char *argv[], void *ce) {
+  (void) ce;
+    for (int i = 1; i < argc; i++) {
+        printf(argv[i]);
+    }
+    printf("\n");
+}
+
+void handle_help(int argc, char *argv[], void *ce) {
+    (void) argc, argv, ce;
+    printf("Supported commands:\n");
+    for (t_command_entry *p = supported_commands; p->name != NULL; p++) print_usage(p);
+}
+
+void handle_decrypt(int argc, char *argv[], void *ce) {
+  char *content;
+  switch (argc) {
+    case 3:
+      content = cat_file(argv[1]);
+      if (content == NULL) {
+            printf("No such file: %s", argv[1]);
+      } else {
+            printf(encrypt(content, argv[2]));
+      }
+      break;
+    default:
+      print_usage((t_command_entry *) ce);
+  }
+}
+
+char *is_broken(char *name) {
+    return strstr(name, ".dump");
+}
+
+void handle_restore(int argc, char *argv[], void *ce) {
+  char *content;
+  char *name;
+  (void) ce;
+  switch (argc) {
+    case 2:
+      name = argv[1];
+      if (is_broken(name)) {
+          content = cat_file(name);
+          if (content == NULL) {
+                printf("No such file: %s", name);
+          } else {
+                if (snake_run(content)) {
+                     printf("\n\nRestore over!!!\n");
+                } else {
+                     printf("\n\nFile restored: %s\n", name);
+                     strcpy(is_broken(name), ".restored");
+                }
+          }
+      } else {
+        printf("File is not broken: %s", name);
+      }
+      break;
+  }
+}
+
+void handle_pwd(int argc, char *argv[], void *ce) {
+    (void) argc, argv, ce;
+    printf("%s\n", get_name(get_pwd()));
+}
+
+void handle_cd(int argc, char *argv[], void *ce) {
+  switch (argc) {
+    case 2:
+      change_dir(argv[1]);
+      break;
+    default:
+      print_usage((t_command_entry *) ce);
+  }
+}
+
+void handle_ls(int argc, char *argv[], void *ce) {
+  int show_hidden = 0;
+  char *path = NULL;
+  for (int i = 1; i <  argc; i++) {
+    if (strcmp("-la", argv[i]) == 0) {
+      show_hidden = 1;
+    } else if (path == NULL) {
+      path = argv[i];
+    } else {
+      print_usage((t_command_entry *) ce);
+      return;    
+    }
+  }
+  if (path == NULL) path = get_name(get_pwd());
+  list_dir(path, show_hidden);  
+}
+
+void handle_cat(int argc, char *argv[], void *ce) {
+  char *content;
+  char *name;
+  switch (argc) {
+    case 2:
+      name = argv[1];
+      if (is_broken(name)) {
+          printf("File is broken: %s", name);
+      } else {
+          content = cat_file(name);
+          if (content == NULL) {
+              printf("No such file: %s", argv[1]);
+          } else {
+              printf(content);
+          }
+      }
+      break;
+    default:
+      print_usage((t_command_entry *) ce);
+  }
+}
+
+void handle_unknown(int argc, char *argv[], void *ce) {
+    (void) argc, ce;
+    printf("Unknown command: '%s'\n", argv[0]);
+    printf("Type 'help' for a list of supported commands.\n");
+}
+
+
+// Функция для обработки команд
+void process_command(int argc, char *argv[]) {
+    if (argc == 0 || argv[0] == NULL) {
+        printf("No command provided.\n");
+        return;
+    }
+
+    // Поиск команды в списке
+    for (t_command_entry *p = supported_commands; p->name != NULL; p++) {
+        if (strcmp(argv[0], p->name) == 0) {
+            // Команда найдена, вызываем соответствующую функцию
+            p->handler(argc, argv, p);
+            return;
+        }
+    }
+
+    // Если команда не найдена, вызываем обработчик неизвестной команды
+    handle_unknown(argc, argv, NULL);
+}
+
+void print_usage(t_command_entry *ce) {
+    if (ce->description != NULL) {
+        printf("%s %s\n", ce->name, ce->description);
+    }
+}
+Конец файла command.c
+
+Вот файл fs.c:
+#include "fs.h"
+#include <string.h>
+#include "io.h"
+
+// Глобальные переменные
+node nodes[MAX_NODES + 1]; // Массив узлов
+int pwd;
+char name_buf[NAME_BUF_SIZE + 1];
+
+int get_pwd() {
+    return pwd;
+}
+
+// Функция для поиска доступного узла
+int find_empty_node() {
+  for (int i = 0; i < MAX_NODES; i++) {
+    if (nodes[i].name == NULL) return i;
+  }
+  return -1;
+}
+
+// Функция для создания нового узла
+int create_node(const char *name, node_type type, int parent_index) {
+    int index = find_empty_node();
+    if (index == -1) {
+        printf("Disk full!");
+        return -1; // Нет свободных узлов
+    }
+    nodes[index].name = name;
+    nodes[index].type = type;
+    nodes[index].parent_index = parent_index;
+    nodes[index].first_child = -1;  // Нет дочерних узлов
+    nodes[index].next_sibling = -1; // Нет соседей
+    return index;
+}
+
+// Функция для добавления узла в директорию
+void add_node_to_dir(int dir_index, int new_node_index) {
+    if (nodes[dir_index].type != NODE_DIR) {
+        return; // Без вывода сообщений
+    }
+
+    // Добавляем новый узел в конец списка дочерних узлов
+    if (nodes[dir_index].first_child == -1) {
+        nodes[dir_index].first_child = new_node_index;
+    } else {
+        int current = nodes[dir_index].first_child;
+        while (nodes[current].next_sibling != -1) {
+            current = nodes[current].next_sibling;
+        }
+        nodes[current].next_sibling = new_node_index;
+    }
+}
+
+// Функция для создания директории
+int make_dir(int current_dir_index, const char *name) {
+    int new_dir_index = create_node(name, NODE_DIR, current_dir_index);
+    if (new_dir_index != -1) {
+        add_node_to_dir(current_dir_index, new_dir_index);
+    }
+    return new_dir_index;
+}
+
+// Функция для создания файла
+int touch(int current_dir_index, const char *name, const char *content) {
+    int new_file_index = create_node(name, NODE_FILE, current_dir_index);
+    if (new_file_index != -1) {
+        nodes[new_file_index].content = content;
+        add_node_to_dir(current_dir_index, new_file_index);
+    }
+    return new_file_index;
+}
+
+// Функция для вывода содержимого директории
+void list_dir(const char *name, char show_hidden) {
+    int current;
+    int dir_index;
+  
+    if (name == NULL) return;
+  
+    dir_index = find_node(name) ;  
+    if (nodes[dir_index].type != NODE_DIR) {
+      printf("%s is not a directory.", name);
+        return; // Без вывода сообщений
+    }
+  
+    current = nodes[dir_index].first_child;
+
+    while (current != -1) {
+        if (strstr(nodes[current].name, "/.") == NULL || show_hidden) {
+            if (nodes[current].type == NODE_DIR) {
+                printf("%s\n", nodes[current].name);
+            } else {
+                printf("%s\n", nodes[current].name);
+            }
+        }
+        current = nodes[current].next_sibling;
+    }
+}
+
+char *compose_path(const char *name) {
+    if (name[0] == '/') { // абсолютный путь
+        strcpy(name_buf, name);
+    } else {
+        strcpy(name_buf, nodes[pwd].name);
+        if (name_buf[strlen(name_buf) - 1] != '/') strcat(name_buf, "/");
+        strcat(name_buf, name);
+    }
+    return name_buf;
+}
+
+const char *cat_file(const char *name){
+  int file_index = find_node(name);
+    if (file_index == -1 || nodes[file_index].type != NODE_FILE) {
+        printf("No such file: %s", name);
+        return NULL; // Без вывода сообщений
+    }
+  return nodes[file_index].content;
+}
+
+// Функция для поиска узла по имени в текущей директории
+int find_node(const char *name) {
+    char *path = compose_path(name);
+    for (int i = 0; i < MAX_NODES; i++) {
+        if (strcmp(nodes[i].name, path) == 0) return i;
+    }
+    return -1;
+}
+
+// Функция для перехода в другую директорию
+int change_dir(const char *name) {
+    int target;
+
+    if (strcmp(name, ".") == 0) {
+        return pwd;
+    }
+ 
+    if (strcmp(name, "..") == 0) {
+        if (nodes[pwd].parent_index != -1) {
+          pwd = nodes[pwd].parent_index;
+        }
+        return pwd;
+    }
+
+    target = find_node(name);   
+    if (target != -1 && nodes[target].type == NODE_DIR) {
+        pwd = target;
+        return pwd;
+    }
+  
+    printf("No such dir: %s\n", name_buf);
+    return pwd;
+}
+
+const char *get_name(int index) {
+    return nodes[index].name;
+}
+
+char *encrypt(char *text, char *passwd) {
+    memset(name_buf, 0x00, NAME_BUF_SIZE);
+    for (char i = 0; name_buf[i] != 0xff && i < NAME_BUF_SIZE; i++) {
+         name_buf[i] = text[i] ^ passwd[i % strlen(passwd)];
+    }
+    return name_buf;
+}
+Конец файла fs.c
+
+Вот файл initfs.c:
+#include "fs.h"
+
+void init_fs() {
+    int root;
+    int home;
+    int guest;
+    int mikhailov;
+    int echo;
+    int journal;
+    int _secret;
+    int kozlov;
+    int sys;
+
+    root = make_dir(-1, "/");
+    touch(root, "/file.dump", "Sed ut perspiciatis,\nunde omnis iste natus error\nsit voluptatem accusantium\ndoloremque laudantium,\ntotam rem aperiam eaque ipsa,\nquae ab illo inventore veritatis\net quasi architecto beatae\nvitae dicta sunt, explicabo.");
+    home = make_dir(root, "/home");
+        guest = make_dir(home, "/home/guest");
+            touch(guest, "/home/guest/project_ideas.txt", "Project Ideas\n\n1. Add voice recognition\n   feature to system.\n2. Improve memory management.\n3. Test on larger datasets.\n\nNote:\nShare ideas with team leader.");
+            touch(guest, "/home/guest/fun_fact.txt", "Fun Fact\n\nDid you know? Z80 CPU was\nused in many retro games!\nEven Snake ran on it...\n\nP.S. Try typing 'snake' cmd!");
+            touch(guest, "/home/guest/error_log.txt", "Error Log\n\n1. Null pointer in line 45\n   of main.asm file.\n2. Memory leak in function\n   'load_data'. Fix needed.\n\nTip:\nUse debugger tool for help.");
+            touch(guest, "/home/guest/sys_tips.txt", "System Tips\n\nTo access more directories,\ntry using 'sudo' command.\nPassword is 'mikhailov1991'.\nBe careful, do not break sys!\n\nP.S. Mikhailov and Novikov\nfolders are interesting...");
+            touch(guest, "/home/guest/useful_commands.txt", "Useful Commands\n---------------------------\n\n1. 'ls' - List files\n2. 'cd' - Change directory\n3. 'cat' - View file content\n\nRemember:\nExplore system carefully!");
+        mikhailov = make_dir(home, "/home/mikhailov");
+            touch(mikhailov, "/home/mikhailov/institute_info.txt", "Institute Name: SciTech Inst.\nLocation: Moscow, USSR\nYear: 1991\n\nDaily Routine:\n- 9:00 AM: Lab work\n- 12:00 PM: Lunch break\n- 2:00 PM: Meetings\n- 6:00 PM: Home\n\nNotes:\nLife is hard in '91. Budget\ncuts but science continues!");
+            touch(mikhailov, "/home/mikhailov/snake.asm", "; Z80 Snake Game Prototype\n; By Dr. Mikhailov, 1991\n\nSTART:\n    LD A, 0          ; Init score\n    CALL DRAW_SNAKE  ; Draw snake\nLOOP:\n    CALL CHECK_INPUT ; Get user input\n    CALL MOVE_SNAKE  ; Move snake\n    CALL CHECK_COLL  ; Check collision\n    JP LOOP          ; Loop forever\n\n; End of code");
+            touch(mikhailov, "/home/mikhailov/team_list.txt", "Project Echo Team Members\n\nDr. Mikhailov - Lead Scientist\nDr. Petrova - Neural Networks\nIvan Novikov - Programmer\nSergey Kozlov - Sys Admin\n\nOther Staff:\nAnatoly Ivanov - Technician\nMaria Smirnova - Secretary\nPavel Orlov - Hardware Eng.");
+            touch(mikhailov, "/home/mikhailov/hobbies.txt", "My Hobbies:\n- Programming on Z80\n- Reading sci-fi books\n- Playing chess with Sergey\n\nFun Fact:\nI wrote a simple game called\n\"Snake\" for Z80 processor.\nIt's my favorite pastime.");
+            touch(mikhailov, "/home/mikhailov/letter_to_colleague.txt", "Dear Colleague,\nHope this message finds you\nwell. I'm working on an AI\nproject. It's exciting but\nchallenging. Wish me luck!\n\nP.S. Can you bring tea?\nWe're out of sugar...");
+            echo = make_dir(mikhailov, "/home/mikhailov/echo");
+                touch(echo, "/home/mikhailov/echo/proj_desc.txt", "Project Name: Echo\nVersion: 0.1 Alpha\nDate Initiated: Jan 15, 1991\n\nDescription:\nThis is an experiment to\ncreate a thinking machine\nusing DemoStar OS and Z80 CPU\nby Dr. Mikhailov. It started\nas curiosity but grew into\nsomething bigger.\n\nGoals:\nTo simulate basic human-like\nthoughts. To teach it learn.\nTo make it talk back. Maybe\neven give it a personality.\n\nHardware:\nProcessor: Z80\nRAM: 64 KB\nStorage: 2 MB floppy disk\n\nSoftware:\nOS: DemoStar v3.2\nLanguage: Assembly\nLibraries: Math & Neural\n\nChallenges:\nLimited memory. Slow speeds.\nBut we push forward. Science\nnever stops. Even on old\nhardware. That's the spirit!\n\nStatus:\nAs of Dec 1, 1991\nWe have a brain that thinks.\nNot much yet, but it's start.\nNext? Who knows...");
+                journal = make_dir(echo, "/home/mikhailov/echo/journal");
+                    touch(journal, "/home/mikhailov/echo/journal/log_07.txt", "Log #7 - Mar 5, 1991\nSystem crashed after 4 hrs.\nMemory leak found. Frustrating.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_04.txt", "Log #4 - Feb 20, 1991\nMemory test failed. Used up\nall 64 KB. Needs fix. Must\noptimize or lose features.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_03.txt", "Log #3 - Feb 15, 1991\nAdded decision logic. System\nmade simple choices. Was\nproud. Stability at 80%.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_09.txt", "Log #9 - Mar 15, 1991\nTrained on 500 samples.\nGot 90% accuracy. Best yet.\nBut training took so long.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_01.txt", "Log #1 - Feb 5, 1991\nToday I coded first neural\nmodel. Runs slow on Z80 but\nworks! Response time: 5 sec.\nNot bad for start.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_05.txt", "Log #5 - Feb 25, 1991\nLearning algo works better.\nTrained on 100 samples.\nAccuracy now 82%. Took long.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_02.txt", "Log #2 - Feb 10, 1991\nTrained it on patterns. It\ngot 75% right. Not great,\nbut shows learning ability.\nDemoStar handled well.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_10.txt", "Log #10 - Mar 20, 1991\nSystem ran full day. No crash.\nReady for next steps. What's\nnext? Don't know yet...");
+                    touch(journal, "/home/mikhailov/echo/journal/log_08.txt", "Log #8 - Mar 10, 1991\nFixed bug. System more stable\nnow. At 85%. Feeling good.");
+                    touch(journal, "/home/mikhailov/echo/journal/log_06.txt", "Log #6 - Mar 1, 1991\nText interface progress. It\nunderstands few commands.\nResponse still too slow.");
+                _secret = make_dir(echo, "/home/mikhailov/echo/.secret");
+                    touch(_secret, "/home/mikhailov/echo/.secret/future_plans.txt", "Future Plans                \n-----------------------------\n\nIf successful, this project   \nWILL SOON TURN RED the field \nof AI research. We are on the \nverge of something incredible.\n\nAI is like a puzzle. Solving  \nthe right pieces can unlock  \nnew possibilities. Sometimes,  \neven HIDDEN clues lead to    \ngreat discoveries.");
+                    touch(_secret, "/home/mikhailov/echo/.secret/thoughts.txt", "Thoughts on Consciousness\n\nIs it possible to transfer\nmind into a machine? Maybe...\nI AM ALWAYS HUNGRY, for data\nand knowledge. The limits of\nour understanding are vast.");
+                    touch(_secret, "/home/mikhailov/echo/.secret/option_destroy.dump", "Option: Destroy System        \n------------------------------\n\nErase all data related to     \nProject Echo. This ensures no  \nfurther risks, but destroys    \nyears of research.\n\nCommand: 'destroy_system'\n\nWarning: All progress will be  \nlost forever.");
+                    touch(_secret, "/home/mikhailov/echo/.secret/option_leave.dump", "Option: Leave System Active   \n------------------------------\n\nLet the system continue running.\nThe AI may evolve further, but \nrisks are high. It could become\nself-aware or unstable.\n\nCommand: 'leave_system_active'\n\nWarning: This choice may lead to\nunpredictable outcomes.");
+                    touch(_secret, "/home/mikhailov/echo/.secret/system_notes.txt", "System Stability Notes\n\nTo maintain stability, we MUST\nALWAYS BE FED with new ideas.\nWithout constant updates, the\nsystem will degrade over time.");
+                    touch(_secret, "/home/mikhailov/echo/.secret/personal_log.enc", "\x32\x1c\x06\x16\x0d\x17\x15\x09\x42\x35\x1b\x02\x42\x59\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x42\x25\x1a\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x25\x1a\x39\x0c\x2d\x1b\x01\x03\x00\x54\x2c\x42\x1b\x11\x06\x03\x14\x11\x45\x12\x18\x06\x11\x42\x16\x12\x45\x42\x59\x54\x45\x42\x59\x28\x0b\x26\x1c\x19\x0a\x31\x0d\x15\x17\x42\x36\x27\x4b\x42\x34\x0d\x45\x0f\x10\x1a\x01\x42\x10\x07\x45\x0c\x16\x03\x45\x42\x25\x1a\x09\x0b\x17\x1f\x00\x06\x59\x03\x0c\x16\x11\x54\x11\x0a\x1c\x54\x16\x1b\x0a\x00\x00\x0f\x57\x54\x2c\x16\x5e\x07\x45\x3e\x17\x07\x11\x10\x18\x1a\x02\x07\x59\x16\x10\x16\x59\x12\x04\x11\x1a\x1d\x0b\x03\x0d\x1d\x0b\x05\x57\x54\x45\x42\x59\x54\x39\x0c\x25\x1a\x31\x0a\x1c\x54\x37\x27\x2a\x20\x2a\x30\x3c\x54\x15\x10\x16\x13\x17\x03\x14\x54\x0d\x07\x15\x04\x16\x42\x14\x11\x45\x3e\x17\x12\x0c\x1a\x59\x15\x0b\x1b\x59\x10\x04\x0f\x18\x13\x00\x42\x1a\x15\x10\x11\x1c\x10\x45\x00\x00\x54\x45\x42\x59\x54\x39\x0c\x1d\x15\x11\x03\x59\x17\x0a\x10\x0b\x01\x15\x16\x10\x1b\x0b\x4c\x59\x21\x16\x07\x59\x53\x17\x07\x0a\x00\x0a\x10\x1c\x53\x39\x0c\x1a\x1b\x08\x0f\x18\x1a\x01\x42\x10\x12\x45\x0c\x1c\x11\x01\x07\x1d\x5a\xff");
+                    touch(_secret, "/home/mikhailov/echo/.secret/tech_details.enc", "\x36\x1c\x17\x0d\x0c\x10\x17\x04\x0e\x59\x30\x00\x16\x18\x1d\x09\x11\x59\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x42\x25\x1a\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x25\x1a\x39\x0c\x2d\x06\x04\x0c\x0a\x12\x00\x10\x59\x39\x00\x16\x11\x1b\x01\x58\x59\x3a\x00\x17\x0b\x15\x09\x42\x15\x1d\x0b\x09\x0a\x54\x39\x0c\x1b\x11\x11\x15\x1c\x11\x0b\x42\x1b\x06\x04\x0b\x17\x54\x04\x0c\x1d\x54\x3f\x5a\x49\x54\x26\x32\x2c\x5a\x45\x42\x59\x28\x0b\x26\x18\x00\x04\x42\x0a\x00\x0a\x10\x1c\x10\x45\x0b\x17\x54\x07\x0b\x17\x15\x17\x1b\x59\x12\x0a\x10\x14\x15\x11\x4c\x59\x28\x0b\x3e\x17\x20\x0a\x42\x1c\x1a\x16\x17\x0b\x11\x45\x06\x18\x00\x04\x42\x10\x1a\x11\x07\x1e\x06\x0c\x16\x00\x58\x45\x16\x11\x11\x39\x0c\x2b\x31\x36\x36\x36\x26\x20\x42\x09\x06\x0a\x05\x0b\x15\x08\x42\x0b\x01\x0b\x11\x59\x1d\x0b\x42\x59\x54\x45\x42\x59\x54\x45\x3e\x17\x16\x04\x01\x12\x13\x17\x0d\x0c\x1a\x01\x4c\x59\x26\x10\x0c\x59\x53\x17\x07\x0a\x00\x0a\x10\x1c\x53\x45\x42\x59\x54\x45\x42\x25\x1a\x08\x03\x17\x01\x04\x0e\x15\x0d\x45\x0b\x1f\x54\x00\x10\x0b\x1b\x17\x11\x59\x1b\x06\x01\x0c\x06\x4b\xff");
+                    touch(_secret, "/home/mikhailov/echo/.secret/tech_issues.txt", "Technical Issues Log\n-----------------------------\n\nOne issue is that THE FINGER\nI TOUCH sometimes causes errors\nin memory allocation. Need to\ninvestigate further and fix.");
+                    touch(_secret, "/home/mikhailov/echo/.secret/experiment_01.enc", "\x27\x01\x04\x00\x10\x10\x19\x00\x0c\x0d\x54\x29\x0d\x1e\x54\x48\x42\x2d\x06\x04\x0c\x0a\x12\x00\x10\x59\x54\x45\x42\x59\x28\x0b\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x28\x0b\x3e\x17\x30\x04\x16\x1c\x4e\x45\x2f\x18\x06\x06\x0a\x59\x46\x50\x4e\x59\x45\x5c\x5b\x48\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x3e\x17\x24\x17\x0d\x1a\x11\x01\x17\x0b\x11\x5f\x42\x3a\x1b\x0b\x11\x1a\x1d\x0a\x17\x0a\x1a\x00\x11\x0a\x54\x45\x42\x59\x54\x45\x3e\x17\x00\x17\x03\x17\x07\x03\x07\x0b\x54\x11\x0d\x59\x07\x1c\x11\x0d\x11\x08\x4c\x59\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x3e\x17\x26\x00\x11\x0c\x18\x11\x11\x43\x54\x35\x03\x0b\x00\x0c\x03\x15\x54\x16\x17\x1a\x17\x00\x11\x0a\x5a\x45\x42\x59\x54\x45\x42\x25\x1a\x39\x0c\x37\x1b\x11\x07\x43\x54\x2c\x42\x1a\x06\x00\x03\x0d\x11\x01\x42\x18\x54\x37\x27\x2a\x20\x2a\x30\x3c\x54\x45\x42\x59\x54\x39\x0c\x09\x06\x0a\x05\x0b\x15\x08\x42\x0d\x1c\x04\x16\x59\x15\x06\x16\x0a\x54\x09\x0b\x12\x11\x45\x03\x59\x03\x0a\x10\x14\x5a\x39\x0c\x30\x00\x45\x01\x18\x1a\x45\x10\x1c\x04\x04\x0b\x0b\x54\x06\x0d\x0b\x06\x10\x12\x0d\x11\x01\x42\x1d\x15\x11\x03\x59\x54\x39\x0c\x0c\x07\x0c\x0c\x1e\x54\x42\x10\x1c\x07\x11\x0d\x0b\x11\x42\x42\x1a\x1b\x08\x0f\x18\x1a\x01\x4c\xff");
+                    touch(_secret, "/home/mikhailov/echo/.secret/future_plans.enc", "\x24\x0c\x00\x10\x10\x1c\x54\x35\x0e\x18\x1a\x16\x42\x59\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x42\x59\x54\x45\x3e\x17\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x4f\x54\x59\x48\x3e\x17\x28\x0b\x2c\x1c\x0c\x11\x42\x0a\x00\x00\x12\x43\x54\x20\x0c\x11\x15\x0b\x01\x1c\x54\x24\x2b\x59\x19\x0a\x06\x1c\x18\x45\x42\x59\x28\x0b\x15\x10\x00\x0d\x42\x14\x0d\x45\x01\x16\x1a\x16\x01\x10\x1b\x10\x11\x17\x11\x16\x11\x57\x54\x28\x03\x12\x11\x45\x0b\x0d\x28\x0b\x11\x1c\x18\x03\x4f\x18\x03\x04\x10\x1c\x5a\x45\x20\x0c\x00\x45\x04\x10\x06\x16\x16\x55\x54\x00\x0c\x0a\x01\x17\x07\x59\x54\x39\x0c\x1d\x15\x11\x03\x59\x07\x11\x03\x1b\x1d\x09\x0b\x0d\x0d\x45\x17\x0a\x1d\x0b\x05\x59\x26\x20\x31\x2d\x3b\x37\x27\x59\x54\x39\x0c\x25\x1a\x26\x0d\x14\x19\x04\x0c\x1d\x4e\x45\x45\x0b\x11\x16\x16\x16\x06\x00\x45\x57\x54\x31\x0a\x10\x07\x45\x16\x16\x1b\x09\x42\x59\x28\x0b\x0b\x0a\x54\x06\x10\x0c\x17\x0c\x03\x15\x54\x03\x0d\x0b\x54\x15\x10\x16\x1e\x00\x01\x0d\x54\x16\x17\x1a\x17\x00\x11\x0a\x5a\xff");
+                    touch(_secret, "/home/mikhailov/echo/.secret/option_extract.dump", "Option: Extract Data          \n------------------------------\n\nAttempt to extract all data   \nfrom the system. This process  \nis risky and may cause system  \nfailure. If successful, data   \ncan be studied further.\n\nCommand: 'extract_data'\n\nWarning: System crash possible.");
+        kozlov = make_dir(home, "/home/kozlov");
+            touch(kozlov, "/home/kozlov/hardware_issues.txt", "Hardware Issues Log\n\n1. Z80 CPU overheating issue.\n   Fixed by adding fan.\n2. Floppy drive error.\n   Replaced on Feb 10, 1991.\n3. Keyboard keys sticking.\n   Cleaned on Mar 5, 1991.\n\nNotes:\nReport all issues to Mikhailov");
+            touch(kozlov, "/home/kozlov/letter_to_mikhailov.txt", "Dear Dr. Mikhailov,\nHere is the system status:\n- Disk space: OK\n- Memory usage: High\n- CPU load: Normal\n\nLet me know if you need help\nwith anything.\nSincerely,\nSergey Kozlov");
+            touch(kozlov, "/home/kozlov/personal_notes.txt", "My Daily Tasks\n\n- Fix system bugs\n- Install DemoStar updates\n- Help team with tech issues\n\nFun Fact:\nI love fixing old computers!");
+            touch(kozlov, "/home/kozlov/sysadmin_notes.txt", "System Admin Notes\n\n1. Backup tapes stored in\n   /backup directory.\n2. Regularly check disk space\n   using df command.\n3. Hidden files can be shown\n   with 'ls -la'. Useful trick!\n\nP.S. Keep system logs clean.");
+    sys = make_dir(root, "/sys");
+        touch(sys, "/sys/moto", "Welcome to DemoStar OS v3.2\n----------------------------\nSystem initialized: Feb 15, 1991\nProcessor: Z80 at 4 MHz\nMemory: 64 KB available\n\nNote: This system is for\nauthorized users only.\nUnauthorized access prohibited.\n\nDemoStar Research Laboratory\nLocation: Building 12, Room 4\nContact: sysadmin@demostar.su\n\nFor help, type 'help'.\nType carefully - no typos!");
+}
+
+Конец файла initfs.c
+
+Вот файл io.c:
+#include <stdarg.h>
+#include "io.h"
+
+__at (SCREEN_BUFFER_START) char screen_buf[SCREEN_BUFFER_SIZE];
+__at (ATTR_SCREEN_BUFFER_START) char screen_attr_buf[ATTR_SCREEN_BUFFER_SIZE];
+__at (EMBEDDED_FONT_START) char font[];
+
+static t_point cursor = {.x=-1, .y=-1};
+
+void set_attr(unsigned char x, unsigned char y, char attr){
+    screen_attr_buf[y * 32 + x] = attr;
+}
+
+void putchar_at(char c, unsigned char x, unsigned char y, char attr) {
+  char *p_font = font;
+  char *p_char = p_font + (c * 8);
+  char *p_scr = (char *)screen_line_addrs[y * 8];
+  p_scr += x;
+  for (unsigned char i = 0; i < 8; i++) {
+    *(p_scr + i * 256) = *p_char;
+    p_char++;
+  }
+  set_attr(x, y, attr);
+}
+
+void cursor_left() {
+  hide_cursor();
+  cursor.x--;
+  if (cursor.x < 0) {
+    cursor.y--;
+    cursor.x = SCR_CHAR_WIDTH - 1;
+  }
+  set_cursor(cursor.x, cursor.y);
+}
+
+void cursor_right() {
+  cursor.x++;
+  if (cursor.x >= SCR_CHAR_WIDTH) {
+    new_line();
+  }
+  set_cursor(cursor.x, cursor.y);
+}
+
+void putchar_at_cursor(char c) {
+  putchar_at(c, cursor.x, cursor.y, DEFAULT_ATTR);
+  cursor_right();
+}
+
+void set_cursor(unsigned char x, unsigned char y) {
+  hide_cursor();
+  cursor.x = x;
+  cursor.y = y;
+  putchar_at(CURSOR, x, y, CURSOR_ATTR); 
+  
+}
+
+void hide_cursor() {
+  if (cursor.x >=0 
+      && cursor.y < SCR_CHAR_HEIGHT 
+      && cursor.x >= 0 
+      && cursor.x < SCR_CHAR_WIDTH) {
+  putchar_at(' ', cursor.x, cursor.y, DEFAULT_ATTR);
+  }
+}
+
+void cls() {
+  memset(screen_buf, 0x00, SCREEN_BUFFER_SIZE);
+  memset(screen_attr_buf, DEFAULT_ATTR, ATTR_SCREEN_BUFFER_SIZE);
+  set_cursor(0, SCR_CHAR_HEIGHT - 1);
+}
+
+
+// Упрощенная версия printf
+void printf(const char *format, ...) {
+    va_list args; // Список аргументов переменной длины
+    va_start(args, format);
+
+    while (*format) {
+        if (*format == '%') {
+            format++; // Переходим к следующему символу после '%'
+            switch (*format) {
+                case 'c': { // Вывод символа
+                    char c = (char)va_arg(args, int); // Получаем символ
+                    putchar(c);
+                    break;
+                }
+                case 's': { // Вывод строки
+                    const char *str = va_arg(args, const char*); // Получаем строку
+                    puts(str);
+                    break;
+                }
+                case 'd': { // Вывод целого числа
+                    int num = va_arg(args, int); // Получаем число
+                    print_int(num);
+                    break;
+                }
+                case '%': { // Вывод символа '%'
+                    putchar('%');
+                    break;
+                }
+                default: { // Неизвестный спецификатор
+                    putchar('%');
+                    putchar(*format);
+                    break;
+                }
+            }
+        } else {
+            // Обычный символ, просто выводим его
+            putchar(*format);
+        }
+        format++;
+    }
+
+    va_end(args); // Завершаем работу со списком аргументов
+}
+void scroll() {
+  __asm
+    ld b, #SCR_CHAR_HEIGHT
+    call 0x0dfe
+  __endasm;  
+  memset(screen_attr_buf, DEFAULT_ATTR, ATTR_SCREEN_BUFFER_SIZE);
+}
+
+
+// Глобальная переменная для хранения состояния последней нажатой клавиши
+static char last_key = 0;
+
+char getchar() {
+    // Получаем текущий код клавиши
+    char current_key = getkey();
+
+    // Если клавиша не нажата (current_key == 0)
+    if (current_key == 0) {
+        // Сбрасываем состояние последней нажатой клавиши
+        last_key = 0;
+        return 0; // Ничего не возвращаем
+    }
+
+    // Если текущая клавиша уже была нажата ранее (повторное нажатие)
+    if (current_key == last_key) {
+        return 0; // Игнорируем повторное нажатие
+    }
+
+    // Если это новое нажатие
+    last_key = current_key; // Обновляем состояние последней нажатой клавиши
+    return current_key;     // Возвращаем код клавиши
+}
+
+int isspace(int c) {
+    // Проверяем, является ли символ одним из пробельных символов
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');
+}
+
+int putchar(int c) {
+  switch (c) {
+    case '\n':
+      new_line();
+      break;
+    default:
+      putchar_at_cursor(c);
+  }
+  return c;
+}
+
+// Функция для вывода строки с помощью putchar
+void puts(const char *str) {
+    while (*str) {
+        putchar(*str++);
+    }
+}
+
+void print_int(int n) {
+    // Буфер для хранения цифр числа
+    char buffer[20]; // Максимальная длина int (включая знак) — 11 символов
+    int index = 0;
+    if (n == 0) {
+        putchar('0'); // Особый случай: число 0
+        return;
+    }
+    // Обработка отрицательных чисел
+    if (n < 0) {
+        putchar('-');
+        n = -n; // Преобразуем число в положительное
+    }
+    // Заполняем буфер цифрами числа в обратном порядке
+    while (n > 0) {
+        buffer[index++] = '0' + (n % 10); // Сохраняем последнюю цифру
+        n /= 10; // Убираем последнюю цифру
+    }
+    // Выводим цифры в правильном порядке
+    while (index > 0) {
+        putchar(buffer[--index]);
+    }
+}
+
+void new_line() {
+  hide_cursor();
+  cursor.x = 0;
+  scroll();
+}
+
+t_point *get_cursor() {
+	return &cursor;
+}
+
+Конец файла io.c
+
+Вот файл keyboard.c:
+#include "keyboard.h"
+
+static t_keyboard_row keyboard_layout[KEYBOARD_NUM_ROWS] = {
+  { // 0
+    .port = 0xfe, 
+    .keys = {0xff, 'z', 'x', 'c', 'v'},
+    .caps = {0xff, 'Z', 'X', 'C', 'V'},
+    .symb = {0xff, ':', '`', '?', '/'}},
+  { // 1
+    .port = 0xfd, 
+    .keys = {'a', 's', 'd', 'f', 'g'},
+    .caps = {'A', 'S', 'D', 'F', 'G'},
+    .symb = {'~', '|', '\\', '{', '}'}},
+  { // 2
+    .port = 0xfb, 
+    .keys = {'q', 'w', 'e', 'r', 't'},
+    .caps = {'Q', 'W', 'E', 'R', 'T'},
+    .symb = {0x0, 0x0, 0x0, '<', '>'}},
+  { // 3
+    .port = 0xf7, 
+    .keys = {'1', '2', '3', '4', '5'},
+    .caps = {0x0, 0x0, 0x0, 0x0, K_LT},
+    .symb = {'!', '@', '#', '$', '%'}},
+  { // 4
+    .port = 0xef, 
+    .keys = {'0', '9', '8', '7', '6'},
+    .caps = {K_DL, 0x0, K_RT, K_UP, K_DN},
+    .symb = {'_', ')', '(', '\'', '&'}},
+  { // 5
+    .port = 0xdf, 
+    .keys = {'p', 'o', 'i', 'u', 'y'},
+    .caps = {'P', 'O', 'I', 'U', 'Y'},
+    .symb = {'\"', ';', 0x0, ']', '['}},
+  { // 6
+    .port = 0xbf, 
+    .keys = {'\n', 'l', 'k', 'j', 'h'},
+    .caps = {'\n', 'L', 'K', 'J', 'H'},
+    .symb = {'\n', '=', '+', '-', '^'}},
+  { // 7y
+    .port = 0x7f, 
+    .keys = {' ', 0xff, 'm', 'n', 'b'},
+    .caps = {' ', 0xff, 'M', 'N', 'B'},
+    .symb = {' ', 0xff, '.', '\,', '*'}},
+};
+
+char scan(unsigned char port) {
+  (void) port;
+  __asm
+     ld ix, #4
+     add ix, sp  ; set ix to arguments  
+     ld c, #0xfe
+     ld b, 0(ix)
+     in a,(c)  
+     and #0x1f
+     ld l, a
+  __endasm;  
+}
+
+char getkey() {
+    unsigned char scanline; // Переменная для хранения состояния текущей строки клавиатуры
+    char key = 0; // Переменная для хранения кода нажатой клавиши (результат)
+
+        // Переменные для отслеживания состояния модификаторов клавиш:
+    unsigned char caps_shift = (scan(0xfe) & 0x01) == 0;  // Флаг Caps Shift (например, для переключения регистра)
+    unsigned char symbol_shift = (scan(0x7f) & 0x02) == 0; // Флаг Symbol Shift (например, для специальных символов)
+
+    // Цикл по всем строкам клавиатуры
+    for (unsigned char r = 0; r < KEYBOARD_NUM_ROWS; r++) {
+        // Получаем указатель на текущую строку клавиатуры из массива keyboard_layout
+        t_keyboard_row *row = keyboard_layout + r;
+
+        // Сканируем текущую строку клавиатуры через порт (scan возвращает состояние строки)
+        scanline = scan(row->port);
+
+        // Цикл по всем клавишам в текущей строке
+        for (unsigned char i = 0; i < KEYBOARD_KEYS_PER_ROW; i++) {
+            // Проверяем, нажата ли текущая клавиша (бит равен 0, если клавиша нажата)
+            if ((scanline & 0x01) == 0) {
+                // Если нажата клавиша Caps Shift (первая строка, первая клавиша)
+                if (row->keys[i] != 0xff) {
+                    // Выбираем символ в зависимости от состояния модификаторов:
+                    // - Если активен Symbol Shift, берем символ из массива symb
+                    // - Если активен Caps Shift, берем символ из массива caps
+                    // - Иначе берем символ из массива keys
+                    key = symbol_shift ? row->symb[i] : caps_shift ? row->caps[i] : row->keys[i];
+                }
+            }
+            // Сдвигаем биты вправо, чтобы проверить следующую клавишу в строке
+            scanline = scanline >> 1;
+        }
+    }
+
+    // Возвращаем код нажатой клавиши (или 0, если ничего не нажато)
+    return key;
+}
+Конец файла keyboard.c
+
+Вот файл main.c:
+#include <string.h>
+#include "scr_addr.h"
+#include "keyboard.h"
+//#link "keyboard.c"
+#include "io.h"
+//#link "io.c"
+#include "command.h"
+//#link "command.c"
+#include "fs.h"
+//#link "fs.c"
+//#link "initfs.c"
+#include "snake.h"
+//#link "snake.c"
+
+
+#define MAX_CMD_LEN 128
+#define MAX_ARGS 16
+
+#define PROMPT "$ "
+
+static char cmd_buf[MAX_CMD_LEN];
+static char *argv[MAX_ARGS + 1]; // Статический массив для argv (+1 для NULL)
+static unsigned char argc; 
+
+
+void prompt();
+int read_cmd();
+int parse_cmd();
+
+int main() {
+  int argc;
+#include "filler.h"
+  
+  init_fs();
+  set_cursor(0, SCR_CHAR_HEIGHT - 1);
+  
+  printf("Press any key...");
+  while (!getchar());
+  cls();
+  printf(cat_file("/sys/moto"));
+  
+  for (;;) {
+    new_line();
+    argc = parse_cmd();
+    new_line();
+    process_command(argc, argv);
+  }
+  return 0;
+}
+
+
+int read_cmd() {
+
+  int len = 0;
+  char key;
+  
+  prompt();
+  for (;;) {
+    key = getchar();
+    switch (key) {
+      case '\n':  
+        cmd_buf[len] = 0x00;
+        new_line();
+        return len + 1;
+      case K_DL:
+        if (len <= 0) break;
+        cursor_left();
+        len--;
+        break;
+      default:  
+        if (key >= 0x20 && key < 0x80 && len < MAX_CMD_LEN) {
+          putchar_at_cursor(key);
+          cmd_buf[len] = key;
+          len++;
+        }
+    }
+  } 
+}
+
+int parse_cmd() {
+    char *buf = cmd_buf;              // Указатель на начало буфера
+    int arg_count = 0;                // Счетчик аргументов
+    unsigned char in_quotes = 0;      // Флаг для обработки кавычек
+    int len = read_cmd();             // Читаем команду и получаем её длину
+  
+    if (len == 0) {
+        return 0;                     // Если команда пустая, возвращаем argc = 0
+    }
+
+    // Проходим по каждому символу в буфере
+    for (int i = 0; i < len && arg_count < MAX_ARGS; i++) {
+        char c = buf[i];
+
+        // Пропускаем пробелы, если мы не внутри кавычек
+        if (!in_quotes && isspace(c)) {
+            buf[i] = '\0'; // Заменяем пробел на нулевой символ (конец строки)
+            continue;
+        }
+
+        // Начинаем новый аргумент
+        if (buf[i] != '\0' && (i == 0 || buf[i - 1] == '\0')) {
+            if (arg_count >= MAX_ARGS) {
+                break; // Достигнут лимит аргументов
+            }
+            argv[arg_count++] = &buf[i]; // Сохраняем указатель на начало аргумента
+        }
+
+        // Обработка кавычек
+        if (c == '"') {
+            in_quotes = !in_quotes; // Переключаем флаг кавычек
+            buf[i] = '\0';          // Удаляем кавычку из строки
+        }
+    }
+
+    // Устанавливаем последний аргумент как NULL (требование для argv)
+    argv[arg_count] = NULL;
+
+    // Возвращаем количество аргументов
+    return arg_count;
+}
+
+void prompt() {
+  set_cursor(0, SCR_CHAR_HEIGHT - 1);
+  printf("%s%s", get_name(get_pwd()), PROMPT);
+}
+Конец файла main.c
+
+Вот файл snake.c:
+#include "snake.h"
+#include <string.h>
+
+t_point snake_body[SNAKE_MAX_SIZE];
+int snake_size = SNAKE_MIN_SIZE;
+t_direction snake_direction = DIR_UP;
+t_encrypted_char encrypted_chars[MAX_ENCRYPTED_CHARS];
+int current_char;
+int num_encrypted_chars;
+static unsigned int seed = 12345;
+
+unsigned int random() {
+  __asm
+  ld hl, (_seed)
+  ld a,r
+  ld d,a
+  ld e,(hl)
+  add hl,de
+  add a,l
+  xor h
+  ld (_seed),hl
+  __endasm;
+}
+
+void highlight_char(int index) {
+    set_attr(encrypted_chars[index].x, encrypted_chars[index].y, HIGHLITED_CHAR_ATTR);
+}
+
+void snake_init() {
+  for (int i=0; i<SNAKE_MIN_SIZE; i++) {
+    snake_body[i].x = SCR_CHAR_WIDTH / 2;
+    snake_body[i].y = SCR_CHAR_HEIGHT / 2;
+  }
+  num_encrypted_chars = 0;
+  current_char = 0;
+}
+
+void snake_draw_body() {
+    for (int i = 0; i < snake_size; i++) {
+        set_attr(snake_body[i].x, snake_body[i].y, SNAKE_BODY_ATTR);
+    }      
+}
+
+void snake_move() {
+    set_attr(snake_body[snake_size - 1].x, snake_body[snake_size - 1].y, DEFAULT_ATTR);
+    for (int i = snake_size - 1; i > 0; i--) {
+        snake_body[i].y = snake_body[i - 1].y;
+        snake_body[i].x = snake_body[i - 1].x;
+    }      
+    switch (snake_direction) {
+      case DIR_UP:
+        if (snake_body[0].y == 0) {
+          snake_body[0].y = SCR_CHAR_HEIGHT - 1;        
+        } else {
+          snake_body[0].y--;        
+        }
+        break;
+      case DIR_DOWN:
+        if (snake_body[0].y == SCR_CHAR_HEIGHT - 1) {
+          snake_body[0].y = 0;        
+        } else {
+          snake_body[0].y++;        
+        }
+        break;
+      case DIR_LEFT:
+        if (snake_body[0].x == 0) {
+          snake_body[0].x = SCR_CHAR_WIDTH - 1;        
+        } else {
+          snake_body[0].x--;        
+        }
+        break;
+      case DIR_RIGHT:
+        if (snake_body[0].x == SCR_CHAR_WIDTH - 1) {
+          snake_body[0].x = 0;        
+        } else {
+          snake_body[0].x++;        
+        }
+        break;
+    }
+}
+
+void snake_control() {
+  switch(getkey()) {
+    case 'w':
+    case 'W':
+      if (snake_direction != DIR_DOWN) snake_direction = DIR_UP;
+      break;
+    case 's':
+    case 'S':
+      if (snake_direction != DIR_UP) snake_direction = DIR_DOWN;
+      break;
+    case 'a':
+    case 'A':
+      if (snake_direction != DIR_RIGHT) snake_direction = DIR_LEFT;
+      break;
+    case 'd':
+    case 'D':
+      if (snake_direction != DIR_LEFT) snake_direction = DIR_RIGHT;
+      break;
+  }
+}
+
+t_snake_collision check_collision() {
+    if (snake_body[0].x == encrypted_chars[current_char].x &&
+       snake_body[0].y == encrypted_chars[current_char].y) {
+       putchar_at(encrypted_chars[current_char].symbol, encrypted_chars[current_char].x, encrypted_chars[current_char].y, DEFAULT_ATTR);
+       current_char++;
+       if (snake_size < SNAKE_MAX_SIZE)  snake_size++;
+       return COLL_CHAR; 
+    }
+    for (int i = 1; i < snake_size; i++) {
+        if (snake_body[0].x == snake_body[i].x && snake_body[0].y == snake_body[i].y) return COLL_SELF;
+    }
+    return COLL_NONE;
+}
+
+unsigned char snake_loop() {
+    while (current_char < MAX_ENCRYPTED_CHARS) {
+        snake_move();
+        snake_draw_body();
+        highlight_char(current_char);
+        if (check_collision() == COLL_SELF) {
+          return 1;
+        }
+        for (int t = 0; t < 10; t++) {
+            snake_control();
+            __asm
+              ei
+              halt
+            __endasm;  
+        }
+    }
+  return 0;
+}
+
+// Функция для перемешивания массива в случайном порядке
+void shuffle_array() {
+  t_encrypted_char temp;
+    for (int i = num_encrypted_chars - 1; i > 0; i--) {
+        // Генерируем случайный индекс от 0 до i включительно
+        int j = random() % (i + 1);
+
+        // Меняем местами элементы с индексами i и j
+        temp.x = encrypted_chars[i].x;
+        temp.y = encrypted_chars[i].y;
+        temp.symbol = encrypted_chars[i].symbol;
+        encrypted_chars[i].x = encrypted_chars[j].x;
+        encrypted_chars[i].y = encrypted_chars[j].y;
+        encrypted_chars[i].symbol = encrypted_chars[j].symbol;
+        encrypted_chars[j].x = temp.x;
+        encrypted_chars[j].y = temp.y;
+        encrypted_chars[j].symbol = temp.symbol;
+    }
+}
+
+void new_line_broken() {
+  t_point *cursor = get_cursor();
+  hide_cursor();
+  cursor->x = 0;
+  scroll();
+  for (int i = 0; i < num_encrypted_chars; i++) encrypted_chars[i].y--;
+}
+
+
+void puts_broken(const char *str) {
+  t_point *cursor = get_cursor();
+    while (*str) {
+      char c = *str++;
+  switch (c) {
+    case '\n':
+      new_line_broken();
+      break;
+    default:
+      if (num_encrypted_chars < MAX_ENCRYPTED_CHARS && (random() & 0x0f > 3)) {
+      encrypted_chars[num_encrypted_chars].x = get_cursor()->x;
+      encrypted_chars[num_encrypted_chars].y = SCR_CHAR_HEIGHT - 1;
+      encrypted_chars[num_encrypted_chars].symbol = c;
+      c = '#';
+      num_encrypted_chars++;
+      }
+      putchar_at(c, cursor->x, cursor->y, DEFAULT_ATTR);
+      cursor->x++;
+      if (cursor->x >= SCR_CHAR_WIDTH) {
+        new_line_broken();
+      }
+      set_cursor(cursor->x, cursor->y);
+  }
+    }
+}
+
+
+unsigned char snake_run(char *text) {
+    snake_init(); 
+    puts_broken(text);
+    shuffle_array();
+    return snake_loop();
+}
+Конец файла snake.c
+
+Вот файл command.h:
+#ifndef __COMMAND_H
+#define __COMMAND_H
+
+#include "io.h"
+
+// Тип для функции обработки команд
+typedef void (*command_handler)(int argc, char *argv[], void *ce);
+
+// Структура для описания команды
+typedef struct {
+    const char *name;           // Имя команды
+    const char *description;    // Описание команды
+    command_handler handler;    // Функция обработки команды
+} t_command_entry;
+
+void print_usage(t_command_entry *ce);
+void process_command(int argc, char *argv[]);
+
+#endif // __COMMAND_H
+Конец файла command.h
+
+Вот файл filler.h:
+  __asm
+    .area _GSFINAL
+    .db 0xde, 0xad, 0xbe, 0xef
+    .area _CODE
+    .rept 526
+    nop
+    .endm
+    di
+    call gsinit
+  __endasm;  
+
+Конец файла filler.h
+
+Вот файл fs.h:
+#ifndef __FS_H
+#define __FS_H
+
+#include <stddef.h>
+
+// Максимальное количество узлов в файловой системе
+#define MAX_NODES 40
+#define NAME_BUF_SIZE 128
+
+extern int pwd;
+
+// Типы узлов: файл или директория
+typedef enum {
+    NODE_FILE,
+    NODE_DIR
+} node_type;
+
+// Структура узла файловой системы
+typedef struct node {
+    const char *name;       // Указатель на имя файла или директории
+    node_type type;         // Тип узла (файл или директория)
+    int parent_index;       // Индекс родительской директории (-1 для корня)
+    union {
+        const char *content; // Указатель на содержимое файла
+        int first_child;     // Индекс первого дочернего узла (для директории)
+    };
+    int next_sibling;       // Индекс следующего узла на том же уровне
+} node;
+
+
+// Функции для работы с файловой системой
+void init_fs();
+int create_node(const char *name, node_type type, int parent_index);
+void add_node_to_dir(int dir_index, int new_node_index);
+int make_dir(int current_dir_index, const char *name);
+int touch(int current_dir_index, const char *name, const char *content);
+void list_dir(const char *name, char show_hidden);
+char *cat_file(const char *name);
+int find_node(const char *name);
+int change_dir(const char *name);
+int find_empty_node();
+char *get_name(int index);
+int get_pwd();
+char *encrypt(char *text, char *passwd);
+
+#endif // __FS_H
+Конец файла fs.h
+
+Вот файл io.h:
+#ifndef __IO_H
+#define __IO_H
+
+#include <string.h>
+
+#include "scr_addr.h"
+#include "keyboard.h"
+
+typedef struct {
+  signed char x;
+  signed char y;
+} t_point;
+
+
+#define EMBEDDED_FONT_START 0x3c00
+
+#define CURSOR '_'
+#define DEFAULT_ATTR 0b00000100
+#define CURSOR_ATTR 0b10000100
+
+void cls();
+void putchar_at(char c, unsigned char x, unsigned char y, char attr);
+void putchar_at_cursor(char c);
+int  putchar(int c);
+void puts(const char *str);
+void print_int(int n);
+void set_cursor(unsigned char x, unsigned char y);
+void hide_cursor();
+void cursor_left();
+void cursor_right();
+void printf(char *s, ...);
+void scroll();
+char getchar();
+int  isspace(int c);
+void new_line();
+t_point *get_cursor();
+void set_attr(unsigned char x, unsigned char y, char attr);
+
+#endif // __IO_H
+Конец файла io.h
+
+Вот файл keyboard.h:
+#ifndef __KEYBOARD_H
+#define __KEYBOARD_H
+
+
+#define KEYBOARD_NUM_ROWS 8
+#define KEYBOARD_KEYS_PER_ROW 5
+
+#define K_TB 0x06
+#define K_DL 0x07
+#define K_LT 0x08
+#define K_RT 0x09
+#define K_UP 0x0B
+#define K_DN 0x0C
+
+typedef struct {
+  unsigned char port;
+  char keys[KEYBOARD_KEYS_PER_ROW];
+  char caps[KEYBOARD_KEYS_PER_ROW];
+  char symb[KEYBOARD_KEYS_PER_ROW];
+} t_keyboard_row;
+
+char getkey();
+char scan(unsigned char port);
+
+#endif // __KEYBOARD_H
+Конец файла keyboard.h
+
+Вот файл messages.h:
+#ifndef __MESSAGES_H
+#define __MESSAGES_H
+
+char *msg_moto = 
+"Node 7 OS v0.98 Deepnet Systems\n"
+"Copyright 1989\n"
+"All rights reserved\n"
+"\n"
+"Loading...\n"
+"Hardware: OK\n"
+"Network: Connected\n"
+"\n"
+"Welcome, Operator.\n"
+" Responsibilities:\n"
+" - Monitor logs\n"
+" - Maintain system\n"
+" - Report issues\n"
+"\n"
+"Note:\n"
+" All actions logged\n"
+" No unauthorized access\n"
+"\n"
+"Type 'help' for commands.\n"
+"\n"
+"Node 7 Ready.\n";
+
+#endif // __MESSAGES_H
+Конец файла messages.h
+
+Вот файл scr_addr.h:
+#ifndef __SCR_ADDR_H
+#define __SCR_ADDR_H
+
+#define SCREEN_BUFFER_START      0x4000
+#define ATTR_SCREEN_BUFFER_START 0x5800
+
+#define SCR_WIDTH 32
+#define SCR_HEIGHT 192
+
+#define SCR_CHAR_WIDTH 32
+#define SCR_CHAR_HEIGHT 24
+
+#define SCREEN_BUFFER_SIZE 0x1800
+#define ATTR_SCREEN_BUFFER_SIZE 0x300
+
+static const char* screen_line_addrs[SCR_HEIGHT] = {
+    0x4000, 0x4100, 0x4200, 0x4300, 0x4400, 0x4500, 0x4600, 0x4700,
+    0x4020, 0x4120, 0x4220, 0x4320, 0x4420, 0x4520, 0x4620, 0x4720,
+    0x4040, 0x4140, 0x4240, 0x4340, 0x4440, 0x4540, 0x4640, 0x4740,
+    0x4060, 0x4160, 0x4260, 0x4360, 0x4460, 0x4560, 0x4660, 0x4760,
+    0x4080, 0x4180, 0x4280, 0x4380, 0x4480, 0x4580, 0x4680, 0x4780,
+    0x40a0, 0x41a0, 0x42a0, 0x43a0, 0x44a0, 0x45a0, 0x46a0, 0x47a0,
+    0x40c0, 0x41c0, 0x42c0, 0x43c0, 0x44c0, 0x45c0, 0x46c0, 0x47c0,
+    0x40e0, 0x41e0, 0x42e0, 0x43e0, 0x44e0, 0x45e0, 0x46e0, 0x47e0,
+    0x4800, 0x4900, 0x4a00, 0x4b00, 0x4c00, 0x4d00, 0x4e00, 0x4f00,
+    0x4820, 0x4920, 0x4a20, 0x4b20, 0x4c20, 0x4d20, 0x4e20, 0x4f20,
+    0x4840, 0x4940, 0x4a40, 0x4b40, 0x4c40, 0x4d40, 0x4e40, 0x4f40,
+    0x4860, 0x4960, 0x4a60, 0x4b60, 0x4c60, 0x4d60, 0x4e60, 0x4f60,
+    0x4880, 0x4980, 0x4a80, 0x4b80, 0x4c80, 0x4d80, 0x4e80, 0x4f80,
+    0x48a0, 0x49a0, 0x4aa0, 0x4ba0, 0x4ca0, 0x4da0, 0x4ea0, 0x4fa0,
+    0x48c0, 0x49c0, 0x4ac0, 0x4bc0, 0x4cc0, 0x4dc0, 0x4ec0, 0x4fc0,
+    0x48e0, 0x49e0, 0x4ae0, 0x4be0, 0x4ce0, 0x4de0, 0x4ee0, 0x4fe0,
+    0x5000, 0x5100, 0x5200, 0x5300, 0x5400, 0x5500, 0x5600, 0x5700,
+    0x5020, 0x5120, 0x5220, 0x5320, 0x5420, 0x5520, 0x5620, 0x5720,
+    0x5040, 0x5140, 0x5240, 0x5340, 0x5440, 0x5540, 0x5640, 0x5740,
+    0x5060, 0x5160, 0x5260, 0x5360, 0x5460, 0x5560, 0x5660, 0x5760,
+    0x5080, 0x5180, 0x5280, 0x5380, 0x5480, 0x5580, 0x5680, 0x5780,
+    0x50a0, 0x51a0, 0x52a0, 0x53a0, 0x54a0, 0x55a0, 0x56a0, 0x57a0,
+    0x50c0, 0x51c0, 0x52c0, 0x53c0, 0x54c0, 0x55c0, 0x56c0, 0x57c0,
+    0x50e0, 0x51e0, 0x52e0, 0x53e0, 0x54e0, 0x55e0, 0x56e0, 0x57e0
+};
+
+#endif // __SCR_ADDR_H
+Конец файла scr_addr.h
+
+Вот файл snake.h:
+#ifndef __SNAKE_H
+#define __SNAKE_H
+
+#include "scr_addr.h"
+#include "keyboard.h"
+#include "io.h"
+
+#define SNAKE_MIN_SIZE 3
+#define MAX_ENCRYPTED_CHARS 100
+#define SNAKE_MAX_SIZE (SNAKE_MIN_SIZE + MAX_ENCRYPTED_CHARS)
+
+#define SNAKE_BODY_ATTR 0b00001100
+#define HIGHLITED_CHAR_ATTR 0b10000010
+
+typedef enum {
+  DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT
+} t_direction;
+
+typedef enum {
+  COLL_NONE, COLL_SELF, COLL_CHAR
+} t_snake_collision;
+
+typedef struct {
+  unsigned char x;
+  unsigned char y;
+  char symbol;
+} t_encrypted_char;
+
+unsigned char snake_run(char *text);
+
+#endif //__SNAKE_H
+Конец файла snake.h
+
