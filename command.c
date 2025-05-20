@@ -49,35 +49,36 @@ void handle_decrypt(int argc, char *argv[], void *ce) {
   }
 }
 
-char *is_broken(char *name) {
-    return strstr(name, ".dump");
-}
-
 void handle_restore(int argc, char *argv[], void *ce) {
   char *content;
   char *name;
   (void) ce;
-  switch (argc) {
-    case 2:
+  if (argc == 2) {
       name = argv[1];
       if (is_broken(name)) {
           content = cat_file(name);
           if (content == NULL) {
                 printf("No such file: %s", name);
           } else {
-                printf("\nRestoring worm running...\n");
-                printf("Use [W][A][S][D] to control worm.\n");
-                if (snake_run(content)) {
-                     printf("\n\nRestore over!!!\n");
-                } else {
+                printf("\nTape worm running...\n");
+                printf("Use [W][A][S][D] to control worm\n");
+                switch (snake_run(content)) {
+                  case RES_FAIL:
+                     printf("\n\nAttempt to restore itself.\n");
+                     printf("Restore over.\n");
+                     break;
+                  case RES_BREAK:  
+                     printf("\n\nUser break.\n");
+                     break;
+                  case RES_DONE:
+                     set_broken(name, 0);
                      printf("\n\nFile restored: %s\n", name);
-                     strcpy(is_broken(name), ".restored");
+                     break;
                 }
           }
       } else {
         printf("File is not broken: %s", name);
       }
-      break;
   }
 }
 

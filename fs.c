@@ -66,6 +66,7 @@ int touch(int current_dir_index, const char *name, const char *content) {
     int new_file_index = create_node(name, NODE_FILE, current_dir_index);
     if (new_file_index != -1) {
         nodes[new_file_index].content = content;
+        if (strstr(name, ".dump")) nodes[new_file_index].broken = 1;
         add_node_to_dir(current_dir_index, new_file_index);
     }
     return new_file_index;
@@ -112,8 +113,7 @@ char *compose_path(const char *name) {
 const char *cat_file(const char *name){
   int file_index = find_node(name);
     if (file_index == -1 || nodes[file_index].type != NODE_FILE) {
-        printf("No such file: %s", name);
-        return NULL; // Без вывода сообщений
+        return NULL;
     }
   return nodes[file_index].content;
 }
@@ -162,4 +162,16 @@ char *encrypt(char *text, char *passwd) {
          name_buf[i] = text[i] ^ passwd[i % strlen(passwd)];
     }
     return name_buf;
+}
+
+unsigned char is_broken(char *name) {
+  int file_index = find_node(name);
+  if (file_index == -1 || nodes[file_index].type != NODE_FILE) return 0;
+  return nodes[file_index].broken;
+}
+
+void set_broken(char *name, unsigned char val) {
+  int file_index = find_node(name);
+  if (file_index == -1 || nodes[file_index].type != NODE_FILE) return;
+  nodes[file_index].broken = val;
 }

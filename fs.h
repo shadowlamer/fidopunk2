@@ -25,6 +25,7 @@ typedef struct node {
         int first_child;     // Индекс первого дочернего узла (для директории)
     };
     int next_sibling;       // Индекс следующего узла на том же уровне
+    unsigned char broken;
 } node;
 
 
@@ -42,5 +43,8 @@ int find_empty_node();
 char *get_name(int index);
 int get_pwd();
 char *encrypt(char *text, char *passwd);
+unsigned char is_broken(char *name);
+void set_broken(char *name, unsigned char val);
+
 
 #endif // __FS_H
