@@ -37,7 +37,7 @@ def generate_code(directory, parent_var="root", indent=0):
 
     code = ""
     if full_path != ".":
-        code += f"{'    ' * indent}{var_name} = make_dir({parent_var}, \"/{dir_name}\");\n"
+        code += f"{'    ' * indent}{var_name} = make_dir({parent_var}, \"/{full_path}\");\n"
 
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
@@ -50,7 +50,7 @@ def generate_code(directory, parent_var="root", indent=0):
                     passwd = item.split(".enc.")[1]
                     content = bytes_to_c_string(xor_text(content, passwd))
                     rel_path = rel_path.replace(f".{passwd}", "")
-                code += f"{'    ' * (indent + 1)}touch({var_name}, \"{item}\", \"{content}\");\n"
+                code += f"{'    ' * (indent + 1)}touch({var_name}, \"/{rel_path}\", \"{content}\");\n"
 
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
