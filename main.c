@@ -13,11 +13,15 @@
 //#link "snake.c"
 
 
-#define MAX_CMD_LEN 128
+#define MAX_CMD_LEN 64
 #define MAX_ARGS 16
+#define MAX_HISTORY_SIZE 8
 
 #define PROMPT "$ "
 
+static char history[MAX_HISTORY_SIZE][MAX_CMD_LEN]; // Буфер истории
+static int history_index = -1;                      // Индекс текущей команды в истории
+static int history_count = 0;                       // Количество сохранённых команд
 static char cmd_buf[MAX_CMD_LEN];
 static char *argv[MAX_ARGS + 1]; // Статический массив для argv (+1 для NULL)
 static unsigned char argc; 
@@ -48,33 +52,88 @@ int main() {
   return 0;
 }
 
+void add_to_history(const char *cmd) {
+    if (strlen(cmd) == 0) return;
+
+    strncpy(history[(history_count++) % MAX_HISTORY_SIZE], cmd, MAX_CMD_LEN - 1);
+    history_count = (history_count > MAX_HISTORY_SIZE) ? MAX_HISTORY_SIZE : history_count;
+}
 
 int read_cmd() {
+    int len = 0;
+    char key;
+    int current_hist_index = -1; // Текущий индекс истории (-1 = нет)
+    
+    prompt();
 
-  int len = 0;
-  char key;
-  
-  prompt();
-  for (;;) {
-    key = getchar();
-    switch (key) {
-      case '\n':  
-        cmd_buf[len] = 0x00;
-        new_line();
-        return len + 1;
-      case K_DL:
-        if (len <= 0) break;
-        cursor_left();
-        len--;
-        break;
-      default:  
-        if (key >= 0x20 && key < 0x80 && len < MAX_CMD_LEN) {
-          putchar_at_cursor(key);
-          cmd_buf[len] = key;
-          len++;
+    for (;;) {
+        key = getchar();
+
+        switch (key) {
+            case '\n':  // Enter
+                cmd_buf[len] = '\0';
+                new_line();
+                add_to_history(cmd_buf); // Добавляем в историю
+                return len + 1;
+
+            case K_DL:  // Удаление символа слева (Backspace)
+                if (len > 0) {
+                    cursor_left();
+                    len--;
+                }
+                break;
+
+            case K_UP:  // Стрелка ВВЕРХ — предыдущая команда
+                if (current_hist_index < history_count - 1) {
+                    current_hist_index++;
+                    set_cursor(0, SCR_CHAR_HEIGHT - 1);
+                    printf("%s%s", get_name(get_pwd()), PROMPT);
+
+                    // Очистка строки
+                    for (int i = 0; i < len; i++) putchar_at_cursor(' ');
+                    set_cursor(0, SCR_CHAR_HEIGHT - 1);  // Замена cursor_goto на set_cursor
+
+                    printf("%s%s", get_name(get_pwd()), PROMPT);
+
+                    strcpy(cmd_buf, history[(history_count - 1 - current_hist_index + MAX_HISTORY_SIZE) % MAX_HISTORY_SIZE]);
+                    len = strlen(cmd_buf);
+                    printf("%s", cmd_buf);
+                }
+                break;
+
+            case K_DN:  // Стрелка ВНИЗ — следующая команда
+                if (current_hist_index >= 0) {
+                    current_hist_index--;
+
+                    set_cursor(0, SCR_CHAR_HEIGHT - 1);  // Замена cursor_goto
+                    printf("%s%s", get_name(get_pwd()), PROMPT);
+
+                    // Очистка строки
+                    for (int i = 0; i < len; i++) putchar_at_cursor(' ');
+                    set_cursor(0, SCR_CHAR_HEIGHT - 1);  // Замена cursor_goto
+
+                    printf("%s%s", get_name(get_pwd()), PROMPT);
+
+                    if (current_hist_index >= 0) {
+                        strcpy(cmd_buf, history[(history_count - 1 - current_hist_index + MAX_HISTORY_SIZE) % MAX_HISTORY_SIZE]);
+                        len = strlen(cmd_buf);
+                    } else {
+                        cmd_buf[0] = '\0';
+                        len = 0;
+                    }
+                    printf("%s", cmd_buf);
+                }
+                break;
+
+            default:
+                if (key >= 0x20 && key < 0x80 && len < MAX_CMD_LEN) {
+                    putchar_at_cursor(key);
+                    cmd_buf[len] = key;
+                    len++;
+                }
+                break;
         }
     }
-  } 
 }
 
 int parse_cmd() {
