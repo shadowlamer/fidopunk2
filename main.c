@@ -41,7 +41,7 @@ int main() {
   printf("Press any key...");
   while (!getchar());
   cls();
-  printf(cat_file("/sys/moto"));
+  printf(cat_file("/etc/motd"));
   
   for (;;) {
     new_line();
